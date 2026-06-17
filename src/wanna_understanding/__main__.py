@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """Wanna Understanding — 主入口点（python -m wanna_understanding）。"""
 
@@ -7,10 +8,10 @@ from __future__ import annotations
 import argparse
 import sys
 
-from wanna_understanding import tcl_bootstrap as _tcl_bootstrap  # noqa: F401
-
 from wanna_understanding import __version__
-from wanna_understanding.application import Application, run_smoke_test
+from wanna_understanding import tcl_bootstrap as _tcl_bootstrap  # noqa: F401
+from wanna_understanding.application import Application
+from wanna_understanding.smoke import run_smoke_test
 
 
 def main(argv: list[str] | None = None) -> None:

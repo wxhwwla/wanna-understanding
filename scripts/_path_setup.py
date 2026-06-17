@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 """路径设置 — 确保仓库根目录在 sys.path 中。"""
 
 from __future__ import annotations

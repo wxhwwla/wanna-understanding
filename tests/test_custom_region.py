@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """自定义监控区域解析测试。"""
 

@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """Windows 窗口工具：活动窗口、客户区矩形与 DPI 缩放。"""
 

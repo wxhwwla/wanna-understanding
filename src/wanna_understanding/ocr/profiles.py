@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """编辑器 OCR 配置：针对 VS Code / Cursor / PyCharm 等优化预处理参数。"""
 
@@ -31,17 +32,26 @@ _PROFILES: dict[str, EditorOCRProfile] = {
         name="vscode_dark",
         upscale_factor=2.5,
         crop_ratio=0.72,
+        strip_line_numbers=True,
     ),
     "vscode_light": EditorOCRProfile(
         name="vscode_light",
         upscale_factor=2.0,
         binarize_threshold=145,
         crop_ratio=0.72,
+        strip_line_numbers=True,
     ),
     "cursor_dark": EditorOCRProfile(
         name="cursor_dark",
         upscale_factor=2.5,
         crop_ratio=0.72,
+        strip_line_numbers=True,
+    ),
+    "trae_dark": EditorOCRProfile(
+        name="trae_dark",
+        upscale_factor=2.5,
+        crop_ratio=0.72,
+        strip_line_numbers=True,
     ),
     "pycharm_dark": EditorOCRProfile(
         name="pycharm_dark",
@@ -85,8 +95,11 @@ def detect_editor_profile(
         return _PROFILES["pycharm_dark"] if dark else _PROFILES["pycharm_light"]
     is_vscode = "visual studio code" in title
     is_cursor = "cursor" in title
+    is_trae = "trae" in title
     if is_cursor:
         return _PROFILES["cursor_dark"] if dark else _PROFILES["vscode_light"]
     if is_vscode:
         return _PROFILES["vscode_dark"] if dark else _PROFILES["vscode_light"]
+    if is_trae:
+        return _PROFILES["trae_dark"] if dark else _PROFILES["vscode_light"]
     return _PROFILES["generic"]

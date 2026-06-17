@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """应用编排：串联截图、OCR、触发、AI 与悬浮窗。"""
 
@@ -17,9 +18,9 @@ from wanna_understanding.ai.client import AIClient
 from wanna_understanding.ai.context import trim_to_context
 from wanna_understanding.ai.history import HistoryStore
 from wanna_understanding.config import Settings, get_data_dir, load_settings
+from wanna_understanding.logger import add_console_handler, get_logger, setup_logging
 from wanna_understanding.ocr.engine import OCREngine
 from wanna_understanding.ocr.profiles import detect_editor_profile
-from wanna_understanding.ocr.theme import detect_dark_theme
 from wanna_understanding.screen.capture_plan import build_monitor_region
 from wanna_understanding.screen.capturer import ScreenCapturer
 from wanna_understanding.screen.region import WindowRegion
@@ -35,6 +36,7 @@ from wanna_understanding.screen.window import (
 from wanna_understanding.trigger.watcher import ContentWatcher
 from wanna_understanding.ui.history_dialog import HistoryDialog
 from wanna_understanding.ui.hotkey import (
+    hotkey_freeze_pressed,
     hotkey_history_pressed,
     hotkey_settings_pressed,
     hotkey_toggle_pressed,
@@ -43,6 +45,8 @@ from wanna_understanding.ui.overlay import OverlayWindow
 from wanna_understanding.ui.settings_dialog import SettingsDialog
 from wanna_understanding.ui.streaming import StreamUpdateThrottler
 from wanna_understanding.ui.tray import TrayController
+
+log = get_logger(__name__)
 
 
 class Application:
@@ -57,6 +61,13 @@ class Application:
         if sys.platform != "win32":
             msg = "Wanna Understanding 当前仅支持 Windows"
             raise OSError(msg)
+        # 初始化日志系统（首次创建 Application 实例时）
+        log_path = setup_logging()
+        add_console_handler()
+        import wanna_understanding as _pkg
+
+        log.info("=== Wanna Understanding v%s 启动 ===", _pkg.__version__)
+        log.info("日志路径: %s", log_path)
         self.settings = settings or load_settings()
         if tray_enabled is not None:
             self.settings = self.settings.model_copy(
@@ -75,7 +86,7 @@ class Application:
             height=self.settings.overlay_height,
             opacity=self.settings.overlay_opacity,
         )
-        self._latest_image: Image.Image | None = None
+        self._latest_full_image: Image.Image | None = None
         self._latest_title: str = ""
         self._latest_hwnd: int = 0
         self._ocr_extractor = OCRTextExtractor(self.ocr)
@@ -84,6 +95,7 @@ class Application:
         self._hotkey_was_down = False
         self._history_hotkey_was_down = False
         self._settings_hotkey_was_down = False
+        self._freeze_hotkey_was_down = False
         self._settle_deadline: float | None = None
         self._ocr_ready = threading.Event()
         self._overlay_hwnd = 0
@@ -94,9 +106,23 @@ class Application:
             debounce_delay=self.settings.debounce_delay,
         )
         self._tray: TrayController | None = None
+        self._last_confirmed_rect: tuple[int, int, int, int] | None = None
+        self._confirmed_window_title: str = ""
+        self._pending_change_while_frozen = False
+
+    def _needs_region_confirm(self) -> bool:
+        """当前窗口是否需要用户框选代码区域。"""
+        if self._last_confirmed_rect is None:
+            return True  # 从未选过
+        # 窗口标题变了就重新选
+        return self._latest_title != self._confirmed_window_title
 
     def run(self) -> None:
         """启动主循环。"""
+        log.info("启动主循环")
+        log.debug("配置: poll_interval=%s, debounce_delay=%s, stream=%s",
+                   self.settings.poll_interval, self.settings.debounce_delay,
+                   self.settings.stream_output)
         self.overlay.show_status(self._startup_message())
         self._arm_settle_deadline()
         self.overlay.set_poll_callback(
@@ -106,8 +132,10 @@ class Application:
         self._overlay_hwnd = self.overlay.hwnd
         self._start_hotkey_loop()
         if self.settings.tray_enabled:
+            log.info("启动系统托盘")
             self._tray = TrayController(
                 on_toggle=self._tray_toggle_overlay,
+                on_freeze=self._tray_freeze_overlay,
                 on_history=self._open_history_dialog,
                 on_settings=self._open_settings_dialog,
                 on_quit=self._request_shutdown,
@@ -118,9 +146,11 @@ class Application:
         try:
             self.overlay.mainloop()
         finally:
+            log.info("主循环退出，清理资源")
             if self._tray is not None:
                 self._tray.stop()
             self.ai.close()
+            log.info("清理完成")
 
     def _startup_message(self) -> str:
         lines = [
@@ -129,7 +159,9 @@ class Application:
             f"轮询间隔：{self.settings.poll_interval}s",
             f"防抖延迟：{self.settings.debounce_delay}s",
             f"局部发送：最多 {self.settings.context_max_lines} 行",
-            "快捷键：Ctrl+Shift+H 显示/隐藏 | J 历史 | O 设置",
+            f"AI 模型：{self.settings.deepseek_model}",
+            "快捷键：Alt+Shift+H 显示/隐藏 | J 历史 | O 设置 | Alt+Shift+F 冻结",
+            "悬浮窗：拖标题栏移动 | 拖蓝角/底边/右边缩放 | Ctrl+滚轮 | 双击标题",
         ]
         if self.settings.tray_enabled:
             lines.append("也可：托盘右键 → 设置 / 退出")
@@ -177,14 +209,33 @@ class Application:
         try:
             target = self._resolve_monitor_target()
             if target is None:
-                self.overlay.hide()
+                if not self.overlay.is_frozen:
+                    self.overlay.hide()
                 return
             hwnd, title = target
+
+            # 冻结期间：仅跟随窗口位置 + 检测窗口变化
+            if self.overlay.is_frozen:
+                if self.watcher.on_window_changed(hwnd):
+                    self.cache.clear()
+                    self._pending_change_while_frozen = True
+                    log.info("窗口变化(冻结中): %s", title)
+                region = self._build_capture_region(hwnd, title)
+                rect = (
+                    region.x, region.y,
+                    region.x + region.width, region.y + region.height,
+                )
+                if self.overlay.is_visible:
+                    self.overlay.show_near(rect)
+                return
+
             if self.watcher.on_window_changed(hwnd):
+                log.info("窗口切换: %s (hwnd=%d)", title, hwnd)
                 self.cache.clear()
                 self._arm_settle_deadline()
                 self.overlay.show_status(
-                    f"已切换窗口：{title}\n等待内容稳定…（停手约 {self.settings.debounce_delay}s）"
+                    f"已切换窗口：{title}\n"
+                    f"等待内容稳定…（停手约 {self.settings.debounce_delay}s）"
                 )
             region = self._build_capture_region(hwnd, title)
             rect = (
@@ -198,17 +249,20 @@ class Application:
             settled_hash = self.watcher.poll()
             if settled_hash and not self._analyzing:
                 self._clear_settle_deadline()
+                log.debug("内容已稳定，开始分析")
                 self._start_analysis()
             elif (
                 not self._analyzing
                 and self._settle_deadline is not None
                 and time.monotonic() >= self._settle_deadline
-                and self._latest_image is not None
+                and self._latest_full_image is not None
             ):
                 self._clear_settle_deadline()
+                log.debug("防抖超时，使用当前截图强制分析")
                 self.overlay.show_status("画面仍在微动，使用当前截图继续分析…")
                 self._start_analysis()
         except Exception as exc:
+            log.error("轮询异常: %s", exc, exc_info=True)
             self.overlay.show_status(f"监控异常：{exc}")
 
     def _resolve_monitor_target(self) -> tuple[int, str] | None:
@@ -244,7 +298,7 @@ class Application:
             if pressed and not self._hotkey_was_down:
                 visible = self.overlay.toggle_visibility()
                 if not visible:
-                    self.overlay.show_status("悬浮窗已隐藏（Ctrl+Shift+H 恢复）")
+                    self.overlay.show_status("悬浮窗已隐藏（Alt+Shift+H 恢复）")
             self._hotkey_was_down = pressed
 
         history_pressed = hotkey_history_pressed()
@@ -256,6 +310,19 @@ class Application:
         if settings_pressed and not self._settings_hotkey_was_down:
             self._open_settings_dialog()
         self._settings_hotkey_was_down = settings_pressed
+
+        freeze_pressed = hotkey_freeze_pressed()
+        if freeze_pressed and not self._freeze_hotkey_was_down:
+            frozen = self.overlay.toggle_freeze()
+            if frozen:
+                self.overlay.show_status("内容已冻结（Alt+Shift+F 解冻）")
+            else:
+                if self._pending_change_while_frozen:
+                    self._pending_change_while_frozen = False
+                    self._arm_settle_deadline()
+                    log.info("解冻后触发重新分析")
+                self.overlay.show_status("内容已解冻，可接收新分析结果")
+        self._freeze_hotkey_was_down = freeze_pressed
 
     def _open_history_dialog(self) -> None:
         HistoryDialog(
@@ -274,7 +341,16 @@ class Application:
     def _tray_toggle_overlay(self) -> None:
         visible = self.overlay.toggle_visibility()
         if not visible:
-            self.overlay.show_status("悬浮窗已隐藏（托盘或 Ctrl+Shift+H 恢复）")
+            self.overlay.show_status("悬浮窗已隐藏（托盘或 Alt+Shift+H 恢复）")
+
+    def _tray_freeze_overlay(self) -> None:
+        """从托盘菜单切换冻结/解冻（绕过 hotkey）。"""
+        frozen = self.overlay.toggle_freeze()
+        log.info("托盘菜单切换冻结: %s", frozen)
+        if not frozen and self._pending_change_while_frozen:
+            self._pending_change_while_frozen = False
+            self._arm_settle_deadline()
+            log.info("解冻后触发重新分析")
 
     def _request_shutdown(self) -> None:
         if self._tray is not None:
@@ -303,6 +379,7 @@ class Application:
             if self._tray is None:
                 self._tray = TrayController(
                     on_toggle=self._tray_toggle_overlay,
+                    on_freeze=self._tray_freeze_overlay,
                     on_history=self._open_history_dialog,
                     on_settings=self._open_settings_dialog,
                     on_quit=self._request_shutdown,
@@ -328,11 +405,20 @@ class Application:
         hwnd, title = get_foreground_window_info()
         if not is_window_visible(hwnd):
             return ""
+        # 不要截图/分析自己的窗口（悬浮窗、设置对话框等）
+        if self._is_own_window(hwnd, title):
+            return ""
         self._latest_hwnd = hwnd
         self._latest_title = title
-        region = self._build_capture_region(hwnd, title)
-        image = self.capturer.capture(region)
-        self._latest_image = image
+        # 截取完整窗口（不做中心裁剪，让用户在框选时看到全貌）
+        # 用 mss 截取主显示器（避免 WindowRegion.physical_rect 重复 DPI 缩放）
+        import mss
+        with mss.mss() as sct:
+            monitor = sct.monitors[1]
+            shot = sct.grab(monitor)
+            image = Image.frombytes("RGB", shot.size, shot.bgra, "raw", "BGRX")
+        self._latest_full_image = image
+        log.debug("全屏截图: %dx%d", image.width, image.height)
         return ScreenCapturer.hash_image(image)
 
     def _resolve_dark_theme(self, image: Image.Image, profile_name: str) -> bool:
@@ -347,16 +433,51 @@ class Application:
         return self.settings.dark_theme
 
     def _start_analysis(self) -> None:
-        if self._latest_image is None:
+        if self._latest_full_image is None:
+            log.debug("跳过分析: 无可用截图")
             return
         self._analyzing = True
+        log.info("=== 开始分析 ===")
         if not self._ocr_ready.is_set():
             self.overlay.show_status("正在加载 OCR 模型，请稍候…")
         else:
             self.overlay.show_status("正在识别代码…")
-        image = self._latest_image.copy()
 
-        def work() -> None:
+        # === 主线程：完整窗口截图 → 用户手动框选 ===
+        raw = self._latest_full_image.copy()
+        # 窗口切换后重新框选；同一窗口复用上次的选择
+        need_selection = self._needs_region_confirm()
+        if need_selection:
+            from wanna_understanding.screen.region_confirm import select_code_region
+            overlay_was_visible = self.overlay.is_visible
+            self.overlay.hide()
+            self.overlay.show_status("请在截图框选代码区域…")
+            sel_rect = select_code_region(raw)
+            if sel_rect is None:
+                log.info("用户取消了区域选择")
+                if overlay_was_visible:
+                    self.overlay.show()
+                self._analyzing = False
+                return
+            self._last_confirmed_rect = sel_rect
+            self._confirmed_window_title = self._latest_title
+            crop_rect = sel_rect
+            log.info("用户选择代码区域: (%d,%d,%d,%d) 窗口=%s",
+                      *crop_rect, self._latest_title)
+            if overlay_was_visible:
+                self.overlay.show()
+        else:
+            # 复用上次框选区域
+            crop_rect = self._last_confirmed_rect  # type: ignore[unreachable]
+            log.debug("复用上次区域: (%d,%d,%d,%d)", *crop_rect)
+            assert crop_rect is not None
+
+        code_image = raw.crop(crop_rect)
+        log.debug("最终代码区域: (%d,%d,%d,%d) → %dx%d",
+                  *crop_rect, code_image.width, code_image.height)
+
+        # === 后台线程：OCR + AI ===
+        def work(img: Image.Image = code_image) -> None:
             stop_heartbeat = threading.Event()
             started = time.monotonic()
 
@@ -371,18 +492,21 @@ class Application:
             pulse.start()
             try:
                 if not self._ocr_ready.is_set():
+                    log.info("首次 OCR 预热中…")
                     self.ocr.warmup()
                     self._ocr_ready.set()
+                    log.info("OCR 预热完成")
                 profile = detect_editor_profile(
                     self._latest_title,
-                    image,
+                    img,
                     auto_dark_theme=self.settings.auto_dark_theme,
                     forced=self.settings.editor_profile,
                 )
-                is_dark = self._resolve_dark_theme(image, profile.name)
+                is_dark = self._resolve_dark_theme(img, profile.name)
+                log.debug("编辑器配置: %s, 深色模式: %s", profile.name, is_dark)
                 code = extract_code_text(
                     hwnd=self._latest_hwnd,
-                    image=image,
+                    image=img,
                     use_uia=self.settings.use_uia,
                     ocr=self._ocr_extractor,
                     uia=self._uia_extractor,
@@ -391,23 +515,31 @@ class Application:
                     is_dark_theme=is_dark,
                 )
                 if not code.strip():
+                    log.warning("OCR 未识别到有效代码")
                     self._schedule_status(
                         "未识别到有效代码，请确保编辑器中有可见代码。"
                     )
                     return
+                log.debug("OCR 提取到 %d 字符", len(code))
                 trimmed = trim_to_context(code, self.settings.context_max_lines)
                 code_hash = hashlib.sha256(trimmed.encode("utf-8")).hexdigest()
                 cached = self.cache.get(code_hash)
                 if cached:
+                    log.info("缓存命中: %s...", code_hash[:8])
                     self._record_history(trimmed, cached)
                     self._schedule_result(cached)
+                    self._schedule_freeze()
                     return
+                log.info("缓存未命中，调用 AI 分析")
                 result = self._run_ai_analysis(trimmed, code_hash)
                 self.cache.put(code_hash, result)
                 self._record_history(trimmed, result)
                 self._schedule_result(result)
+                self._schedule_freeze()
+                log.info("分析完成")
             except Exception as exc:
                 detail = traceback.format_exc(limit=2)
+                log.error("分析失败: %s", exc, exc_info=True)
                 self._schedule_status(f"分析失败：{exc}\n\n{detail}")
             finally:
                 stop_heartbeat.set()
@@ -441,10 +573,18 @@ class Application:
         return result
 
     def _schedule_status(self, message: str) -> None:
+        log.debug("状态: %s", message.split("\n")[0])
         self.overlay.schedule(lambda: self.overlay.show_status(message))
 
     def _schedule_result(self, result: AnalysisResult) -> None:
         self.overlay.schedule(lambda: self.overlay.update_content(result))
+
+    def _schedule_freeze(self) -> None:
+        """分析完成后延迟 2 秒自动冻结（让流式显示稳定后再冻结）。"""
+        def _do_freeze() -> None:
+            self.overlay.toggle_freeze()
+        # 延迟 2 秒，避免流式更新还在进行就被冻结截断
+        self.overlay.root.after(2000, _do_freeze)
 
     def _record_history(self, code: str, result: AnalysisResult) -> None:
         if not self.settings.history_enabled:
@@ -454,72 +594,3 @@ class Application:
             code=code,
             result=result,
         )
-
-
-def run_smoke_test(settings: Settings | None = None) -> int:
-    """无 GUI 冒烟：截图 → OCR →（可选）AI，结果打印到终端。"""
-    if sys.platform != "win32":
-        print("错误：冒烟测试仅支持 Windows。")
-        return 1
-    cfg = settings or load_settings()
-    capturer = ScreenCapturer()
-    ocr = OCREngine()
-    hwnd, title = get_foreground_window_info()
-    print(f"活动窗口: {title!r} (hwnd={hwnd})")
-    if not is_window_visible(hwnd):
-        print("窗口不可见或已最小化。")
-        return 1
-    region = build_monitor_region(
-        hwnd,
-        title,
-        monitor_mode=cfg.monitor_mode,
-        monitor_rect=cfg.monitor_rect,
-        crop_ratio=cfg.crop_ratio,
-        editor_profile=cfg.editor_profile,
-    )
-    image = capturer.capture(region)
-    ocr_extractor = OCRTextExtractor(ocr)
-    uia_extractor = UIAutomationTextExtractor()
-    profile = detect_editor_profile(
-        title,
-        image,
-        auto_dark_theme=cfg.auto_dark_theme,
-        forced=cfg.editor_profile,
-    )
-    is_dark = (
-        profile.name.endswith("_dark")
-        or (
-            profile.name == "generic"
-            and (detect_dark_theme(image) if cfg.auto_dark_theme else cfg.dark_theme)
-        )
-    )
-    print(f"编辑器配置: {profile.name}（{'深色' if is_dark else '浅色'}）")
-    if cfg.use_uia:
-        print("文本提取: UIA 优先")
-    code = extract_code_text(
-        hwnd=hwnd,
-        image=image,
-        use_uia=cfg.use_uia,
-        ocr=ocr_extractor,
-        uia=uia_extractor,
-        window_title=title,
-        profile=profile,
-        is_dark_theme=is_dark,
-    )
-    print("--- OCR 结果 ---")
-    print(code or "(空)")
-    trimmed = trim_to_context(code, cfg.context_max_lines)
-    if trimmed != code:
-        print(f"--- 裁剪后 ({cfg.context_max_lines} 行) ---")
-        print(trimmed)
-    if not cfg.has_api_key:
-        print("\n未配置 DEEPSEEK_API_KEY，跳过 AI 分析。")
-        return 0
-    client = AIClient(cfg)
-    try:
-        result = client.analyze(trimmed)
-        print("\n--- AI 分析 ---")
-        print(result.format_display())
-    finally:
-        client.close()
-    return 0

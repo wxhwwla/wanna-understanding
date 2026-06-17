@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """全屏框选监控区域（供设置对话框与 CLI 复用）。"""
 

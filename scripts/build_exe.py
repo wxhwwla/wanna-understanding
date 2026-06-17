@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """PyInstaller 打包脚本 — 生成 Windows 可分发目录。"""
 

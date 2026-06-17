@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """代码上下文裁剪：减少发送给 AI 的 token 用量。"""
 

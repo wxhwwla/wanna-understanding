@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """内容变化监控：轮询截图哈希并在稳定后触发分析。"""
 

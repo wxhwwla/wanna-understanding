@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wanna-understanding"
-version = "0.1.15"
+version = "0.1.17"
 description = "理解，从数据开始。"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -101,6 +101,7 @@ ignore = [
     "RUF001",  # String contains ambiguous character (中文标点)
     "RUF002",  # Docstring contains ambiguous character (中文标点)
     "RUF003",  # Comment contains ambiguous character (中文注释)
+    "UP009",  # UTF-8 encoding declaration is unnecessary (项目约定需要编码头)
 ]
 fixable = ["ALL"]
 

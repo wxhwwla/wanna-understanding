@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """屏幕截图引擎：基于 mss 截取全屏或指定区域。"""
 

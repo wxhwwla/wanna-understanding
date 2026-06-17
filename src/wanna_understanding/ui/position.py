@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """悬浮窗定位计算（纯函数，便于测试）。"""
 

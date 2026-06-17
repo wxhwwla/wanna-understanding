@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """分析历史浏览对话框。"""
 
@@ -43,7 +44,7 @@ class HistoryDialog:
             bg="#2d2d2d",
             fg="#d4d4d4",
             selectbackground="#094771",
-            font=tkfont.Font(family="Segoe UI", size=10),
+            font=tkfont.Font(family="Microsoft YaHei UI", size=12),
             relief="flat",
             borderwidth=0,
         )
@@ -60,7 +61,7 @@ class HistoryDialog:
             wrap="word",
             bg="#2d2d2d",
             fg="#d4d4d4",
-            font=tkfont.Font(family="Consolas", size=10),
+            font=tkfont.Font(family="Microsoft YaHei", size=13),
             relief="flat",
             borderwidth=0,
             padx=8,

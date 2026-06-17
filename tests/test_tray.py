@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """系统托盘测试。"""
 
@@ -25,6 +26,7 @@ def test_tray_controller_start_stop(monkeypatch) -> None:
     schedule = MagicMock()
     tray = TrayController(
         on_toggle=MagicMock(),
+        on_freeze=MagicMock(),
         on_history=MagicMock(),
         on_settings=MagicMock(),
         on_quit=MagicMock(),

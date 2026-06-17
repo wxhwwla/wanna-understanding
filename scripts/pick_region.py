@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """屏幕区域框选工具：拖拽选定监控矩形并打印环境变量。"""
 

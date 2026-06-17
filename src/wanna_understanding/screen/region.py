@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """区域值对象：封装矩形坐标并处理 DPI 缩放与中心裁剪。"""
 

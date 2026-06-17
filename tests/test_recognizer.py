@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """OCRRecognizer 单元测试（Mock EasyOCR，无需安装模型）。"""
 

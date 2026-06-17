@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """全局配置：API Key、轮询频率、防抖与缓存参数。"""
 
@@ -47,12 +48,21 @@ def _format_env_value(value: object) -> str:
     return str(value)
 
 
+# DeepSeek 同一 API 下常用模型 ID（model 参数）
+DEEPSEEK_MODEL_PRESETS: tuple[str, ...] = (
+    "deepseek-v4-flash",
+    "deepseek-v4-pro",
+    "deepseek-chat",
+    "deepseek-reasoner",
+)
+
+
 class Settings(BaseModel):
     """运行时配置。"""
 
     deepseek_api_key: str = ""
     deepseek_api_base: str = "https://api.deepseek.com"
-    deepseek_model: str = "deepseek-chat"
+    deepseek_model: str = "deepseek-v4-flash"
     poll_interval: float = Field(default=2.0, ge=0.5, le=30.0)
     debounce_delay: float = Field(default=0.5, ge=0.1, le=5.0)
     crop_ratio: float = Field(default=0.7, gt=0.0, le=1.0)
@@ -67,8 +77,8 @@ class Settings(BaseModel):
     monitor_mode: str = "window"
     monitor_rect: str = ""
     use_uia: bool = False
-    overlay_width: int = Field(default=400, ge=200, le=1200)
-    overlay_height: int = Field(default=300, ge=150, le=900)
+    overlay_width: int = Field(default=520, ge=200, le=1200)
+    overlay_height: int = Field(default=380, ge=150, le=900)
     overlay_opacity: float = Field(default=0.85, gt=0.1, le=1.0)
     request_timeout: float = Field(default=60.0, ge=5.0, le=300.0)
     history_enabled: bool = True
@@ -98,7 +108,7 @@ class Settings(BaseModel):
             deepseek_api_base=os.getenv(
                 "DEEPSEEK_API_BASE", "https://api.deepseek.com"
             ),
-            deepseek_model=os.getenv("DEEPSEEK_MODEL", "deepseek-chat"),
+            deepseek_model=os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash"),
             poll_interval=float(os.getenv("WU_POLL_INTERVAL", "2.0")),
             debounce_delay=float(os.getenv("WU_DEBOUNCE_DELAY", "0.5")),
             crop_ratio=float(os.getenv("WU_CROP_RATIO", "0.7")),
@@ -113,8 +123,8 @@ class Settings(BaseModel):
             monitor_mode=os.getenv("WU_MONITOR_MODE", "window"),
             monitor_rect=os.getenv("WU_MONITOR_RECT", ""),
             use_uia=cls._parse_bool(os.getenv("WU_USE_UIA", "false")),
-            overlay_width=int(os.getenv("WU_OVERLAY_WIDTH", "400")),
-            overlay_height=int(os.getenv("WU_OVERLAY_HEIGHT", "300")),
+            overlay_width=int(os.getenv("WU_OVERLAY_WIDTH", "520")),
+            overlay_height=int(os.getenv("WU_OVERLAY_HEIGHT", "380")),
             overlay_opacity=float(os.getenv("WU_OVERLAY_OPACITY", "0.85")),
             request_timeout=float(os.getenv("WU_REQUEST_TIMEOUT", "60.0")),
             history_enabled=cls._parse_bool(os.getenv("WU_HISTORY_ENABLED", "true")),
@@ -127,6 +137,7 @@ def _settings_env_map(settings: Settings) -> dict[str, str]:
     """将 Settings 映射为环境变量键值。"""
     return {
         "DEEPSEEK_API_KEY": settings.deepseek_api_key,
+        "DEEPSEEK_MODEL": settings.deepseek_model,
         "WU_POLL_INTERVAL": _format_env_value(settings.poll_interval),
         "WU_DEBOUNCE_DELAY": _format_env_value(settings.debounce_delay),
         "WU_CONTEXT_MAX_LINES": _format_env_value(settings.context_max_lines),

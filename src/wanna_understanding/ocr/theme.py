@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """编辑器主题检测：根据截图亮度判断深色/浅色模式。"""
 

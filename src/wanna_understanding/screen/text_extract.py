@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """文本提取抽象：UI Automation 优先，OCR 兜底。"""
 
@@ -13,7 +14,7 @@ if TYPE_CHECKING:
     from wanna_understanding.ocr.profiles import EditorOCRProfile
 
 
-_ELECTRON_EDITOR_HINTS = ("visual studio code", "cursor", "vscode")
+_ELECTRON_EDITOR_HINTS = ("visual studio code", "cursor", "vscode", "trae")
 
 
 def _is_electron_editor(window_title: str) -> bool:

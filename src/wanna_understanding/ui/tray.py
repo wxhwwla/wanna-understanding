@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """系统托盘图标与右键菜单。"""
 
@@ -46,6 +47,7 @@ class TrayController:
         self,
         *,
         on_toggle: Callable[[], None],
+        on_freeze: Callable[[], None],
         on_history: Callable[[], None],
         on_settings: Callable[[], None],
         on_quit: Callable[[], None],
@@ -53,6 +55,7 @@ class TrayController:
         tooltip: str = "Wanna Understanding",
     ) -> None:
         self._on_toggle = on_toggle
+        self._on_freeze = on_freeze
         self._on_history = on_history
         self._on_settings = on_settings
         self._on_quit = on_quit
@@ -69,6 +72,7 @@ class TrayController:
 
         menu = pystray.Menu(
             pystray.MenuItem("显示/隐藏悬浮窗", self._menu_toggle, default=True),
+            pystray.MenuItem("冻结/解冻内容", self._menu_freeze),
             pystray.MenuItem("分析历史", self._menu_history),
             pystray.MenuItem("设置", self._menu_settings),
             pystray.Menu.SEPARATOR,
@@ -95,6 +99,9 @@ class TrayController:
 
     def _menu_toggle(self, _icon: object, _item: object) -> None:
         self._schedule(self._on_toggle)
+
+    def _menu_freeze(self, _icon: object, _item: object) -> None:
+        self._schedule(self._on_freeze)
 
     def _menu_history(self, _icon: object, _item: object) -> None:
         self._schedule(self._on_history)

@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """图像预处理管线：放大、灰度、二值化与反色。"""
 
@@ -6,7 +7,11 @@ from __future__ import annotations
 
 from PIL import Image, ImageOps
 
+from wanna_understanding.logger import get_logger
+
 from .profiles import EditorOCRProfile
+
+log = get_logger(__name__)
 
 _MAX_OCR_EDGE = 1600
 
@@ -21,7 +26,9 @@ class ImagePreprocessor:
         enlarged = image.resize(new_size, Image.Resampling.LANCZOS)
         return self._clamp_size(enlarged)
 
-    def _clamp_size(self, image: Image.Image, max_edge: int = _MAX_OCR_EDGE) -> Image.Image:
+    def _clamp_size(
+        self, image: Image.Image, max_edge: int = _MAX_OCR_EDGE
+    ) -> Image.Image:
         """限制最长边，避免大图 OCR 在 CPU 上过慢。"""
         width, height = image.size
         longest = max(width, height)
@@ -36,12 +43,20 @@ class ImagePreprocessor:
         return ImageOps.grayscale(image)
 
     def adaptive_threshold(self, image: Image.Image) -> int:
-        """根据灰度中位数计算自适应二值化阈值。"""
+        """根据灰度分布计算自适应二值化阈值。
+
+        代码截图中文字约占 20-30% 像素（深色），背景占多数。
+        用 25th 百分位作为阈值，可以更好分离文字与背景。
+        """
         gray = image.convert("L")
         pixels = list(gray.get_flattened_data())
         if not pixels:
             return 128
-        return int(sorted(pixels)[len(pixels) // 2])
+        total = len(pixels)
+        sorted_px = sorted(pixels)
+        # 25th percentile — 文字通常是最暗的 ~25% 像素
+        threshold = int(sorted_px[total // 4])
+        return max(30, min(200, threshold))
 
     def binarize(self, image: Image.Image, threshold: int = 128) -> Image.Image:
         """二值化，减弱语法高亮背景干扰。"""
@@ -79,6 +94,8 @@ class ImagePreprocessor:
             result = self.invert(result)
         if profile and profile.binarize_threshold is not None:
             threshold = profile.binarize_threshold
+            log.debug("预处理: 使用 profile 固定阈值 %d", threshold)
         else:
             threshold = self.adaptive_threshold(result)
+            log.debug("预处理: 自适应阈值 %d", threshold)
         return self.binarize(result, threshold=threshold)

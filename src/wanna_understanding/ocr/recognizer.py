@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """EasyOCR 文本识别器 — 改编自 endfield_damage_calculator/tools/ocr/recognizer.py。"""
 

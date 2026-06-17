@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """运行时设置对话框。"""
 
@@ -8,9 +9,16 @@ import tkinter as tk
 from collections.abc import Callable
 from tkinter import messagebox
 
-from wanna_understanding.config import Settings, save_settings_to_dotenv
+from wanna_understanding.config import (
+    DEEPSEEK_MODEL_PRESETS,
+    Settings,
+    save_settings_to_dotenv,
+)
 from wanna_understanding.screen.custom_region import format_monitor_rect
 from wanna_understanding.screen.region_picker import pick_screen_region
+
+# 字体常量
+_FONT_HINT = ("Microsoft YaHei UI", 10)
 
 
 class SettingsDialog:
@@ -21,6 +29,7 @@ class SettingsDialog:
         "vscode_dark",
         "vscode_light",
         "cursor_dark",
+        "trae_dark",
         "pycharm_dark",
         "pycharm_light",
         "generic",
@@ -37,10 +46,18 @@ class SettingsDialog:
         self._on_saved = on_saved
         self._window = tk.Toplevel(parent)
         self._window.title("设置")
-        self._window.geometry("480x680")
+        self._window.geometry("480x760")
         self._window.configure(bg="#1e1e1e")
         self._window.transient(parent)
         self._window.grab_set()
+
+        # 统一设置默认字体 (Tk option database)
+        # 注意：含空格的字体名必须用花括号括起来
+        self._window.option_add("*Font", "{Microsoft YaHei UI} 12")
+        self._window.option_add("*Entry.Font", "Consolas 12")
+        self._window.option_add("*Button.Font", "{Microsoft YaHei UI} 12")
+        self._window.option_add("*Menu.Font", "{Microsoft YaHei UI} 12")
+        self._window.option_add("*Checkbutton.Font", "{Microsoft YaHei UI} 12")
 
         form = tk.Frame(self._window, bg="#1e1e1e", padx=12, pady=12)
         form.pack(fill="both", expand=True)
@@ -49,6 +66,39 @@ class SettingsDialog:
         self._api_key = self._add_entry(
             form, row, "DeepSeek API Key", settings.deepseek_api_key
         )
+        row += 1
+        preset_value = (
+            settings.deepseek_model
+            if settings.deepseek_model in DEEPSEEK_MODEL_PRESETS
+            else "custom"
+        )
+        self._model_preset = self._add_option(
+            form,
+            row,
+            "AI 模型",
+            (*DEEPSEEK_MODEL_PRESETS, "custom"),
+            preset_value,
+        )
+        row += 1
+        custom_default = (
+            settings.deepseek_model
+            if settings.deepseek_model not in DEEPSEEK_MODEL_PRESETS
+            else ""
+        )
+        self._model_custom = self._add_entry(
+            form, row, "自定义模型 ID", custom_default
+        )
+        row += 1
+        tk.Label(
+            form,
+            text="Flash 更快更省；Pro 更强。同一 API Key，仅 model 参数不同。",
+            bg="#1e1e1e",
+            fg="#888888",
+            font=_FONT_HINT,
+            anchor="w",
+            wraplength=420,
+            justify="left",
+        ).grid(row=row, column=0, columnspan=2, sticky="w", pady=(0, 4))
         row += 1
         self._poll = self._add_entry(
             form, row, "轮询间隔 (秒)", str(settings.poll_interval)
@@ -85,6 +135,7 @@ class SettingsDialog:
             text="UIA 对 VS Code/Cursor 等 Electron 编辑器通常无效，建议保持关闭。",
             bg="#1e1e1e",
             fg="#888888",
+            font=_FONT_HINT,
             anchor="w",
             wraplength=420,
             justify="left",
@@ -128,6 +179,7 @@ class SettingsDialog:
             text="保存后写入 .env；保存后立即生效。",
             bg="#1e1e1e",
             fg="#888888",
+            font=_FONT_HINT,
             anchor="w",
             wraplength=420,
             justify="left",
@@ -205,11 +257,26 @@ class SettingsDialog:
         menu.grid(row=row, column=1, sticky="ew", pady=4)
         return var
 
+    def _resolve_model_id(self) -> str:
+        preset = self._model_preset.get().strip()
+        if preset != "custom":
+            return preset
+        return self._model_custom.get().strip()
+
     def _on_save(self) -> None:
+        model_id = self._resolve_model_id()
+        if not model_id:
+            messagebox.showerror(
+                "输入错误",
+                "请选择 AI 模型，或填写自定义模型 ID。",
+                parent=self._window,
+            )
+            return
         try:
             updated = self._original.model_copy(
                 update={
                     "deepseek_api_key": self._api_key.get().strip(),
+                    "deepseek_model": model_id,
                     "poll_interval": float(self._poll.get().strip()),
                     "debounce_delay": float(self._debounce.get().strip()),
                     "context_max_lines": int(self._context_lines.get().strip()),

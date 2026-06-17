@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """AI 分析结果模型与 LRU 缓存。"""
 
@@ -23,13 +24,25 @@ class AnalysisResult(BaseModel):
     def format_display(self) -> str:
         """格式化为悬浮窗展示文本。"""
         lines = [f"功能说明：{self.summary}", ""]
+        lines.append("潜在 Bug：")
         if self.bugs:
-            lines.append("潜在 Bug：")
             lines.extend(f"  • {bug}" for bug in self.bugs)
-            lines.append("")
+        else:
+            lines.append("  • 未发现明显 bug")
+        lines.append("")
+        lines.append("改进建议：")
         if self.suggestions:
-            lines.append("改进建议：")
             lines.extend(f"  • {item}" for item in self.suggestions)
+        else:
+            lines.append("  • 暂无")
+        if "无法确定" in self.summary and self.raw_response.strip():
+            lines.extend(
+                [
+                    "",
+                    "—— 原始回复 ——",
+                    self.raw_response.strip()[:800],
+                ]
+            )
         return "\n".join(lines).strip()
 
 

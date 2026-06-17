@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """流式 UI 更新节流，避免 Tk 主线程被刷爆。"""
 

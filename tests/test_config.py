@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0
+# -*- coding: utf-8 -*-
 
 """配置加载测试。"""
 
@@ -43,6 +44,7 @@ def test_save_settings_to_dotenv_roundtrip(tmp_path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     settings = Settings(
         deepseek_api_key="new-key",
+        deepseek_model="deepseek-v4-pro",
         poll_interval=2.5,
         debounce_delay=0.6,
         context_max_lines=30,
@@ -61,10 +63,31 @@ def test_save_settings_to_dotenv_roundtrip(tmp_path, monkeypatch) -> None:
     save_settings_to_dotenv(settings)
     text = env_file.read_text(encoding="utf-8")
     assert "DEEPSEEK_API_KEY=new-key" in text
+    assert "DEEPSEEK_MODEL=deepseek-v4-pro" in text
     assert "WU_POLL_INTERVAL=2.5" in text
     assert "# comment" in text
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    monkeypatch.delenv("DEEPSEEK_MODEL", raising=False)
+    for key in (
+        "WU_POLL_INTERVAL",
+        "WU_DEBOUNCE_DELAY",
+        "WU_CONTEXT_MAX_LINES",
+        "WU_STREAM_OUTPUT",
+        "WU_EDITOR_PROFILE",
+        "WU_MONITOR_MODE",
+        "WU_MONITOR_RECT",
+        "WU_USE_UIA",
+        "WU_HISTORY_ENABLED",
+        "WU_HISTORY_MAX_ENTRIES",
+        "WU_TRAY_ENABLED",
+        "WU_OVERLAY_WIDTH",
+        "WU_OVERLAY_HEIGHT",
+        "WU_OVERLAY_OPACITY",
+    ):
+        monkeypatch.delenv(key, raising=False)
     reloaded = Settings.from_env()
     assert reloaded.deepseek_api_key == "new-key"
+    assert reloaded.deepseek_model == "deepseek-v4-pro"
     assert reloaded.poll_interval == 2.5
     assert reloaded.history_enabled is False
     assert reloaded.tray_enabled is False
