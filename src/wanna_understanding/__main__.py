@@ -7,6 +7,8 @@ from __future__ import annotations
 import argparse
 import sys
 
+from wanna_understanding import tcl_bootstrap as _tcl_bootstrap  # noqa: F401
+
 from wanna_understanding import __version__
 from wanna_understanding.application import Application, run_smoke_test
 

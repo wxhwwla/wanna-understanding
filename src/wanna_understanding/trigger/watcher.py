@@ -26,12 +26,13 @@ class ContentWatcher:
         return self._debounce.observe(self._hash_provider())
 
     def on_window_changed(self, hwnd: int) -> bool:
-        """活动窗口切换时重置状态，返回是否发生了切换。"""
+        """活动窗口切换时重置状态；首次附着不算「切换」。"""
         if hwnd == self._last_hwnd:
             return False
+        switched = self._last_hwnd is not None
         self._last_hwnd = hwnd
         self._debounce.reset()
-        return True
+        return switched
 
     def reset(self) -> None:
         """重置监控状态。"""

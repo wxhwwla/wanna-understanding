@@ -40,5 +40,6 @@ class ScreenCapturer:
 
     @staticmethod
     def hash_image(image: Image.Image) -> str:
-        """计算截图内容的 SHA256 哈希，用于变化检测。"""
-        return hashlib.sha256(image.tobytes()).hexdigest()
+        """计算截图内容的 SHA256 哈希，用于变化检测（缩小后降低 UI 微动敏感度）。"""
+        sample = image.resize((64, 64), Image.Resampling.LANCZOS).convert("L")
+        return hashlib.sha256(sample.tobytes()).hexdigest()

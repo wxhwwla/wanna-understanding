@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+from wanna_understanding import tcl_bootstrap as _tcl_bootstrap  # noqa: F401
+
 import tkinter as tk
 from collections.abc import Callable
 from tkinter import font as tkfont

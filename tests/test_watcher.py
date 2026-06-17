@@ -19,7 +19,9 @@ def test_watcher_returns_hash_after_settle(monkeypatch) -> None:
 
 def test_watcher_resets_on_window_change() -> None:
     watcher = ContentWatcher(hash_provider=lambda: "same", debounce_delay=0.1)
-    assert watcher.on_window_changed(100) is True
     assert watcher.on_window_changed(100) is False
-    watcher.reset()
+    assert watcher.on_window_changed(100) is False
     assert watcher.on_window_changed(200) is True
+    watcher.reset()
+    assert watcher.on_window_changed(200) is False
+    assert watcher.on_window_changed(300) is True

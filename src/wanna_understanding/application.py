@@ -7,6 +7,7 @@ from __future__ import annotations
 import hashlib
 import sys
 import threading
+import time
 import traceback
 
 from PIL import Image
@@ -83,6 +84,7 @@ class Application:
         self._hotkey_was_down = False
         self._history_hotkey_was_down = False
         self._settings_hotkey_was_down = False
+        self._settle_deadline: float | None = None
         self.watcher = ContentWatcher(
             hash_provider=self._capture_hash,
             debounce_delay=self.settings.debounce_delay,
@@ -92,6 +94,7 @@ class Application:
     def run(self) -> None:
         """启动主循环。"""
         self.overlay.show_status(self._startup_message())
+        self._arm_settle_deadline()
         self.overlay.set_poll_callback(
             int(self.settings.poll_interval * 1000),
             self._on_poll,
@@ -139,6 +142,14 @@ class Application:
             lines.append("提示：未配置 DEEPSEEK_API_KEY，将仅展示 OCR 状态。")
         return "\n".join(lines)
 
+    def _arm_settle_deadline(self) -> None:
+        """在防抖迟迟不结束时，超时后强制用当前画面分析。"""
+        wait = max(4.0, self.settings.debounce_delay * 3)
+        self._settle_deadline = time.monotonic() + wait
+
+    def _clear_settle_deadline(self) -> None:
+        self._settle_deadline = None
+
     def _on_poll(self) -> None:
         try:
             self._handle_hotkey()
@@ -148,7 +159,10 @@ class Application:
                 return
             if self.watcher.on_window_changed(hwnd):
                 self.cache.clear()
-                self.overlay.show_status(f"已切换窗口：{title}\n等待内容稳定…")
+                self._arm_settle_deadline()
+                self.overlay.show_status(
+                    f"已切换窗口：{title}\n等待内容稳定…（停手约 {self.settings.debounce_delay}s）"
+                )
             region = self._build_capture_region(hwnd, title)
             rect = (
                 region.x,
@@ -160,6 +174,16 @@ class Application:
                 self.overlay.show_near(rect)
             settled_hash = self.watcher.poll()
             if settled_hash and not self._analyzing:
+                self._clear_settle_deadline()
+                self._start_analysis()
+            elif (
+                not self._analyzing
+                and self._settle_deadline is not None
+                and time.monotonic() >= self._settle_deadline
+                and self._latest_image is not None
+            ):
+                self._clear_settle_deadline()
+                self.overlay.show_status("画面仍在微动，使用当前截图继续分析…")
                 self._start_analysis()
         except Exception as exc:
             self.overlay.show_status(f"监控异常：{exc}")
