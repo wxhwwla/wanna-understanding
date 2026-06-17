@@ -41,16 +41,26 @@ from wanna_understanding.ui.hotkey import (
 from wanna_understanding.ui.overlay import OverlayWindow
 from wanna_understanding.ui.settings_dialog import SettingsDialog
 from wanna_understanding.ui.streaming import StreamUpdateThrottler
+from wanna_understanding.ui.tray import TrayController
 
 
 class Application:
     """主应用：轮询截图哈希，稳定后 OCR + AI 分析。"""
 
-    def __init__(self, settings: Settings | None = None) -> None:
+    def __init__(
+        self,
+        settings: Settings | None = None,
+        *,
+        tray_enabled: bool | None = None,
+    ) -> None:
         if sys.platform != "win32":
             msg = "Wanna Understanding 当前仅支持 Windows"
             raise OSError(msg)
         self.settings = settings or load_settings()
+        if tray_enabled is not None:
+            self.settings = self.settings.model_copy(
+                update={"tray_enabled": tray_enabled}
+            )
         self.capturer = ScreenCapturer()
         self.ocr = OCREngine()
         self.ai = AIClient(self.settings)
@@ -77,6 +87,7 @@ class Application:
             hash_provider=self._capture_hash,
             debounce_delay=self.settings.debounce_delay,
         )
+        self._tray: TrayController | None = None
 
     def run(self) -> None:
         """启动主循环。"""
@@ -85,8 +96,21 @@ class Application:
             int(self.settings.poll_interval * 1000),
             self._on_poll,
         )
-        self.overlay.mainloop()
-        self.ai.close()
+        if self.settings.tray_enabled:
+            self._tray = TrayController(
+                on_toggle=self._tray_toggle_overlay,
+                on_history=self._open_history_dialog,
+                on_settings=self._open_settings_dialog,
+                on_quit=self._request_shutdown,
+                schedule=self.overlay.schedule,
+            )
+            self._tray.start()
+        try:
+            self.overlay.mainloop()
+        finally:
+            if self._tray is not None:
+                self._tray.stop()
+            self.ai.close()
 
     def _startup_message(self) -> str:
         lines = [
@@ -108,6 +132,8 @@ class Application:
             lines.append(f"监控模式：自定义区域 ({rect_hint})")
         if self.settings.use_uia:
             lines.append("文本提取：UI Automation 优先")
+        if self.settings.tray_enabled:
+            lines.append("系统托盘：已启用（右键菜单可退出）")
         if not self.settings.has_api_key:
             lines.append("")
             lines.append("提示：未配置 DEEPSEEK_API_KEY，将仅展示 OCR 状态。")
@@ -170,6 +196,17 @@ class Application:
             self.settings,
             on_saved=self._apply_settings,
         )
+
+    def _tray_toggle_overlay(self) -> None:
+        visible = self.overlay.toggle_visibility()
+        if not visible:
+            self.overlay.show_status("悬浮窗已隐藏（托盘或 Ctrl+Shift+H 恢复）")
+
+    def _request_shutdown(self) -> None:
+        if self._tray is not None:
+            self._tray.stop()
+            self._tray = None
+        self.overlay.root.quit()
 
     def _apply_settings(self, new_settings: Settings) -> None:
         self.settings = new_settings

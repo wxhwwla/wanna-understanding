@@ -30,6 +30,8 @@ def build(*, clean: bool = False) -> int:
         "--hidden-import",
         "easyocr",
         "--hidden-import",
+        "pystray",
+        "--hidden-import",
         "mss",
         "--collect-all",
         "easyocr",

@@ -38,9 +38,11 @@ python -m wanna_understanding
 python -m wanna_understanding --smoke
 ```
 
-启动后程序会监控**当前活动窗口**，滚动停止约 0.5 秒后自动 OCR 识别代码并调用 AI 分析，结果展示在右侧悬浮窗。
+启动后程序会监控**当前活动窗口**，滚动停止约 0.5 秒后自动 OCR 识别代码并调用 AI 分析，结果展示在右侧悬浮窗。关闭控制台窗口不会退出程序——请用**托盘右键 → 退出**，或任务管理器结束进程。
 
 **快捷键**：`Ctrl+Shift+H` 显示/隐藏 | `J` 历史 | `S` 设置（均需按住 Ctrl+Shift）
+
+**系统托盘**：默认启用；禁用：`$env:WU_TRAY_ENABLED = "false"` 或 `python -m wanna_understanding --no-tray`
 
 默认 **流式输出** AI 回复；关闭：`$env:WU_STREAM_OUTPUT = "false"`。
 

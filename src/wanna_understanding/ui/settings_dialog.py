@@ -70,6 +70,8 @@ class SettingsDialog:
             form, row, "保存分析历史", settings.history_enabled
         )
         row += 1
+        self._tray = self._add_bool(form, row, "系统托盘图标", settings.tray_enabled)
+        row += 1
         self._editor = self._add_option(
             form,
             row,
@@ -172,6 +174,7 @@ class SettingsDialog:
                     "stream_output": self._stream.get(),
                     "use_uia": self._use_uia.get(),
                     "history_enabled": self._history.get(),
+                    "tray_enabled": self._tray.get(),
                     "editor_profile": self._editor.get(),
                     "monitor_mode": self._monitor_mode.get(),
                     "monitor_rect": self._monitor_rect.get().strip(),

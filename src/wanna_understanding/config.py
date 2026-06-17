@@ -61,6 +61,7 @@ def _settings_env_map(settings: Settings) -> dict[str, str]:
         "WU_USE_UIA": _format_env_value(settings.use_uia),
         "WU_HISTORY_ENABLED": _format_env_value(settings.history_enabled),
         "WU_HISTORY_MAX_ENTRIES": _format_env_value(settings.history_max_entries),
+        "WU_TRAY_ENABLED": _format_env_value(settings.tray_enabled),
     }
 
 
@@ -116,6 +117,7 @@ class Settings(BaseModel):
     request_timeout: float = Field(default=60.0, ge=5.0, le=300.0)
     history_enabled: bool = True
     history_max_entries: int = Field(default=50, ge=1, le=500)
+    tray_enabled: bool = True
 
     @field_validator("dark_theme", mode="before")
     @classmethod
@@ -161,6 +163,7 @@ class Settings(BaseModel):
             request_timeout=float(os.getenv("WU_REQUEST_TIMEOUT", "60.0")),
             history_enabled=cls._parse_bool(os.getenv("WU_HISTORY_ENABLED", "true")),
             history_max_entries=int(os.getenv("WU_HISTORY_MAX_ENTRIES", "50")),
+            tray_enabled=cls._parse_bool(os.getenv("WU_TRAY_ENABLED", "true")),
         )
 
 
