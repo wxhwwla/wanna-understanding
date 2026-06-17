@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: AGPL-3.0
 
 """Wanna Understanding — 主入口点（python -m wanna_understanding）。"""
 

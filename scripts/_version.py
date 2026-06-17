@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: AGPL-3.0
 """
 项目版本号与上传元数据 — 版本信息唯一源头。
 
@@ -14,7 +14,7 @@ from pathlib import Path
 
 # ==================== 版本常量（唯一源头） ====================
 
-_VERSION = "0.1.1"
+_VERSION = "0.1.2"
 """项目版本号。
 
 上传脚本在有变更并 push 成功时自动递增（默认第三位 +1）。

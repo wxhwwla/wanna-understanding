@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: AGPL-3.0
 """从 GitHub 拉取代码并覆盖本地工作区（仓库根目录运行）。
 
 认证：SSH（git@github.com:...），不依赖 git_key.txt。
@@ -21,7 +21,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-# 须完整输入该词才会执行 reset --hard / clean -fd
 CONFIRM_PHRASE = "覆盖本地"
 _MAX_LISTED_CHANGES = 30
 

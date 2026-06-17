@@ -149,4 +149,4 @@ pytest --cov=wanna_understanding # 覆盖率
 
 ## 📄 许可证
 
-MIT License。详见 [LICENSE](LICENSE)。
+AGPL-3.0（默认）或书面商业许可。详见 [LICENSE](LICENSE)。

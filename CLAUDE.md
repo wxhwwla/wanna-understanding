@@ -1,6 +1,11 @@
-# CLAUDE.md — 项目规则（完整版）
+# CLAUDE.md — 项目规则
 
-> 本文件是 Claude Code 全局遵守的项目规则。每次新对话自动加载。
+> **本文件是 Claude Code 的项目规则。完整权威规则位于 `.trae/rules/project_rules.md`。**
+>
+> 每次新对话开始时，按以下顺序执行：
+> 1. 读取本文档
+> 2. 读取 `docs/会话接续手册.md`
+> 3. 读取 `docs/项目目标.md`
 
 ---
 

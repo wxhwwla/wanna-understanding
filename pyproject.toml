@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "理解，从数据开始。"
 readme = "README.md"
 requires-python = ">=3.11"
-license = {file = "LICENSE"}
+license = {text = "AGPL-3.0-only"}
 authors = [
     {name = "wxhwwla", email = "wxhwwla@gmail.com"},
 ]

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: AGPL-3.0
 """上传元数据 — 从 _version.py 导入所有公共 API。
 
 此文件保持薄层，所有真实逻辑在 `_version.py` 中。

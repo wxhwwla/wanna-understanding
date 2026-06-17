@@ -1,7 +1,7 @@
 # 第三方声明与署名（NOTICES）
 
 本文件列明本仓库使用的第三方组件与素材来源。
-完整许可详见 [`LICENSE`](LICENSE)。
+完整许可详见 [`LICENSE`](LICENSE)（AGPL-3.0 或商业许可）。
 
 ---
 

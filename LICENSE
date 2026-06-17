@@ -1,21 +1,98 @@
-MIT License
+Wanna Understanding（AI 代码审阅员）— 软件版权与许可说明
+Copyright (C) 2026 wxhwwla
 
-Copyright (c) 2026
+完整合规说明：docs/数据来源与许可.md
+第三方声明：NOTICES.md
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+================================================================================
+〇、接受方式
+================================================================================
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  下载、克隆、安装、运行、修改或再分发本软件，即表示您已阅读并同意
+  本 LICENSE；若不同意，请停止使用并删除副本。
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  向本仓库贡献代码（Pull Request 等）即表示您拥有相应权利，并同意
+  在相同许可条件下授权给版权持有者（贡献者保留其著作权，见贡献协议惯例）。
+
+================================================================================
+一、软件许可（二选一，须择一遵守）
+================================================================================
+
+【选项 A】GNU Affero General Public License 第 3 版（AGPL-3.0）
+
+  若您未与版权持有者签订书面商业许可协议，则本软件及基于本软件的
+  衍生作品适用 AGPL-3.0。您享有 AGPL-3.0 授予的权利并承担相应义务，
+  包括但不限于：
+
+  - 再分发（含修改版）时向接收方提供对应完整源代码及本 LICENSE；
+  - 若通过网络提供可与第三方远程交互的服务（如 SaaS、远程 API），
+    须按 AGPL-3.0 第 13 条向用户提供获取对应源代码的方式。
+
+  注意：AGPL-3.0 本身允许商业使用，但须满足上述开源义务。若您希望
+  在闭源或免开源义务的前提下商用，须取得选项 B 的商业许可。
+
+  AGPL-3.0 完整正文（英文）：
+  https://www.gnu.org/licenses/agpl-3.0.html
+  https://www.gnu.org/licenses/agpl-3.0.txt
+
+【选项 B】商业许可
+
+  下列行为须事先取得版权持有者书面授权并签订商业许可协议，未经
+  书面授权不得主张适用选项 B：
+
+  - 出售、出租、许可使用或收费分发本软件或其衍生作品；
+  - 将本软件纳入收费软件、收费服务、付费咨询/定制开发、应用商店
+    付费条目等；
+  - 在企业、机构内部作为商业产品或商业服务的一部分使用，且不满足
+    AGPL-3.0 全部义务的情形；
+  - 提供需付费访问的在线服务，且未按 AGPL-3.0 向用户提供源代码。
+
+  商业许可咨询：wxhwwla@gmail.com
+
+  选项 A 与选项 B 对同一使用行为不可混用；未取得商业许可的商用，
+  应适用选项 A 并满足 AGPL-3.0，或停止使用。
+
+================================================================================
+二、允许的创作者支持（不视为选项 B 的商业许可）
+================================================================================
+
+  下列行为不触发选项 B，且不得捆绑出售本软件副本：
+
+  - 版权持有人在公开平台接受的观众自愿「充电」「打赏」「礼物」等；
+  - 面向版权持有人个人的自愿资助，且与源代码分发无直接对价关系。
+
+================================================================================
+三、分发与声明保留
+================================================================================
+
+  再分发本软件或衍生作品时，须：
+
+  - 保留本 LICENSE、NOTICES.md（建议）；
+  - AGPL-3.0 路径满足源码提供义务。
+
+================================================================================
+四、免责声明与责任限制
+================================================================================
+
+  本软件按「原样」提供。版权人在法律允许的最大范围内，不对适销性、
+  特定用途适用性、分析结果准确性等作任何明示或默示保证。
+
+  因使用或无法使用本软件而产生的直接或间接损失（含数据丢失、业务
+  中断、第三方索赔），除法律强制规定外，版权人不对 AGPL-3.0 路径下
+  的使用承担责任；商业许可路径以书面协议约定为准。
+
+  AGPL-3.0 本身的免责声明条款仍然适用。
+
+================================================================================
+五、争议处理
+================================================================================
+
+  争议应首先通过 wxhwwla@gmail.com 协商。协商不成的，与 AGPL-3.0
+  开源分发相关的争议，在版权人住所地有管辖权的人民法院寻求解决
+  （适用法律：中华人民共和国法律，不包括冲突法规则）。
+
+  商业许可争议以书面协议约定的争议解决条款为准。
+
+================================================================================
+
+除上述约定外，选项 A 下您享有 AGPL-3.0 授予的其他权利并承担其他义务。
