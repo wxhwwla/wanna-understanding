@@ -9,6 +9,8 @@ from collections.abc import Callable
 from tkinter import messagebox
 
 from wanna_understanding.config import Settings, save_settings_to_dotenv
+from wanna_understanding.screen.custom_region import format_monitor_rect
+from wanna_understanding.screen.region_picker import pick_screen_region
 
 
 class SettingsDialog:
@@ -35,7 +37,7 @@ class SettingsDialog:
         self._on_saved = on_saved
         self._window = tk.Toplevel(parent)
         self._window.title("设置")
-        self._window.geometry("460x520")
+        self._window.geometry("480x680")
         self._window.configure(bg="#1e1e1e")
         self._window.transient(parent)
         self._window.grab_set()
@@ -60,11 +62,33 @@ class SettingsDialog:
             form, row, "最大发送行数", str(settings.context_max_lines)
         )
         row += 1
+        self._overlay_width = self._add_entry(
+            form, row, "悬浮窗宽度", str(settings.overlay_width)
+        )
+        row += 1
+        self._overlay_height = self._add_entry(
+            form, row, "悬浮窗高度", str(settings.overlay_height)
+        )
+        row += 1
+        self._overlay_opacity = self._add_entry(
+            form, row, "悬浮窗透明度 (0-1)", str(settings.overlay_opacity)
+        )
+        row += 1
         self._stream = self._add_bool(form, row, "流式 AI 输出", settings.stream_output)
         row += 1
         self._use_uia = self._add_bool(
             form, row, "UI Automation 优先", settings.use_uia
         )
+        row += 1
+        tk.Label(
+            form,
+            text="UIA 对 VS Code/Cursor 等 Electron 编辑器通常无效，建议保持关闭。",
+            bg="#1e1e1e",
+            fg="#888888",
+            anchor="w",
+            wraplength=420,
+            justify="left",
+        ).grid(row=row, column=0, columnspan=2, sticky="w", pady=(0, 4))
         row += 1
         self._history = self._add_bool(
             form, row, "保存分析历史", settings.history_enabled
@@ -92,13 +116,21 @@ class SettingsDialog:
             form, row, "自定义区域 (L,T,W,H)", settings.monitor_rect
         )
         row += 1
+        pick_row = tk.Frame(form, bg="#1e1e1e")
+        pick_row.grid(row=row, column=0, columnspan=2, sticky="ew", pady=4)
+        tk.Button(pick_row, text="框选监控区域…", command=self._on_pick_region).pack(
+            side="left"
+        )
+        row += 1
 
         hint = tk.Label(
             form,
-            text="保存后写入 .env；轮询间隔、托盘开关需重启生效。",
+            text="保存后写入 .env；保存后立即生效。",
             bg="#1e1e1e",
             fg="#888888",
             anchor="w",
+            wraplength=420,
+            justify="left",
         )
         hint.grid(row=row, column=0, columnspan=2, sticky="w", pady=(8, 0))
 
@@ -108,6 +140,16 @@ class SettingsDialog:
         tk.Button(btn_row, text="取消", command=self._window.destroy).pack(
             side="right", padx=8
         )
+
+    def _on_pick_region(self) -> None:
+        self._window.grab_release()
+        rect = pick_screen_region(self._window)
+        self._window.grab_set()
+        if rect is None:
+            return
+        self._monitor_mode.set("custom")
+        self._monitor_rect.delete(0, tk.END)
+        self._monitor_rect.insert(0, format_monitor_rect(rect))
 
     def _add_entry(
         self,
@@ -171,6 +213,9 @@ class SettingsDialog:
                     "poll_interval": float(self._poll.get().strip()),
                     "debounce_delay": float(self._debounce.get().strip()),
                     "context_max_lines": int(self._context_lines.get().strip()),
+                    "overlay_width": int(self._overlay_width.get().strip()),
+                    "overlay_height": int(self._overlay_height.get().strip()),
+                    "overlay_opacity": float(self._overlay_opacity.get().strip()),
                     "stream_output": self._stream.get(),
                     "use_uia": self._use_uia.get(),
                     "history_enabled": self._history.get(),

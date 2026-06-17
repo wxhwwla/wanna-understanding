@@ -66,6 +66,9 @@ class OverlayWindow:
         self.text.bind("<B1-Motion>", self._on_drag)
         self.text.insert("end", "正在等待代码变化…")
         self.text.configure(state="disabled")
+        self._poll_after_id: str | None = None
+        self._poll_interval_ms = 2000
+        self._poll_callback: Callable[[], None] | None = None
 
     @property
     def is_visible(self) -> bool:
@@ -95,6 +98,16 @@ class OverlayWindow:
         self.root.geometry(f"{self.width}x{self.height}+{x}+{y}")
         if self._visible:
             self.root.deiconify()
+
+    def apply_geometry(self, width: int, height: int, opacity: float) -> None:
+        """更新悬浮窗尺寸与透明度（立即生效）。"""
+        self.width = max(200, width)
+        self.height = max(150, height)
+        self.opacity = max(0.1, min(1.0, opacity))
+        self.root.attributes("-alpha", self.opacity)
+        x = self.root.winfo_x()
+        y = self.root.winfo_y()
+        self.root.geometry(f"{self.width}x{self.height}+{x}+{y}")
 
     def toggle_visibility(self) -> bool:
         """切换显示/隐藏，返回切换后是否可见。"""
@@ -139,14 +152,37 @@ class OverlayWindow:
         self.text.insert("end", content)
         self.text.configure(state="disabled")
 
-    def set_poll_callback(self, interval_ms: int, callback: Callable[[], None]) -> None:
+    def set_poll_callback(
+        self, interval_ms: int, callback: Callable[[], None]
+    ) -> None:
         """注册周期性轮询回调。"""
+        self._poll_callback = callback
+        self._poll_interval_ms = max(100, interval_ms)
+        if self._poll_after_id is not None:
+            self.root.after_cancel(self._poll_after_id)
+            self._poll_after_id = None
+        self._schedule_poll()
+
+    def set_poll_interval(self, interval_ms: int) -> None:
+        """运行时调整轮询间隔（毫秒）。"""
+        self._poll_interval_ms = max(100, interval_ms)
+        if self._poll_callback is None:
+            return
+        if self._poll_after_id is not None:
+            self.root.after_cancel(self._poll_after_id)
+            self._poll_after_id = None
+        self._schedule_poll()
+
+    def _schedule_poll(self) -> None:
+        if self._poll_callback is None:
+            return
 
         def _loop() -> None:
-            callback()
-            self.root.after(interval_ms, _loop)
+            if self._poll_callback is not None:
+                self._poll_callback()
+            self._poll_after_id = self.root.after(self._poll_interval_ms, _loop)
 
-        self.root.after(interval_ms, _loop)
+        self._poll_after_id = self.root.after(self._poll_interval_ms, _loop)
 
     def mainloop(self) -> None:
         """进入 Tk 主循环。"""

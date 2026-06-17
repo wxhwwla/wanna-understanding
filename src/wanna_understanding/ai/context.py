@@ -6,7 +6,10 @@ from __future__ import annotations
 
 
 def trim_to_context(code: str, max_lines: int = 20) -> str:
-    """裁剪为最多 max_lines 行，默认取中间可见区域近似值。
+    """裁剪为最多 max_lines 行。
+
+    OCR 无法获知真实光标位置，故取识别文本的**垂直中间段**作为
+    「当前可见代码」的近似（与截图中心裁剪策略一致）。
 
     Args:
         code: OCR 识别出的完整代码文本。

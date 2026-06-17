@@ -214,9 +214,31 @@ class Application:
         self.ai = AIClient(self.settings)
         self.watcher.debounce_delay = new_settings.debounce_delay
         self.history.set_max_entries(new_settings.history_max_entries)
-        self.overlay.show_status(
-            "设置已更新。轮询间隔与托盘开关需重启后生效。"
+        self.overlay.apply_geometry(
+            new_settings.overlay_width,
+            new_settings.overlay_height,
+            new_settings.overlay_opacity,
         )
+        self.overlay.set_poll_interval(int(new_settings.poll_interval * 1000))
+        self._sync_tray()
+        self.overlay.show_status("设置已更新并立即生效。")
+
+    def _sync_tray(self) -> None:
+        """按当前配置启动或停止系统托盘。"""
+        if self.settings.tray_enabled:
+            if self._tray is None:
+                self._tray = TrayController(
+                    on_toggle=self._tray_toggle_overlay,
+                    on_history=self._open_history_dialog,
+                    on_settings=self._open_settings_dialog,
+                    on_quit=self._request_shutdown,
+                    schedule=self.overlay.schedule,
+                )
+                self._tray.start()
+            return
+        if self._tray is not None:
+            self._tray.stop()
+            self._tray = None
 
     def _build_capture_region(self, hwnd: int, title: str) -> WindowRegion:
         return build_monitor_region(
@@ -284,6 +306,7 @@ class Application:
                 code_hash = hashlib.sha256(trimmed.encode("utf-8")).hexdigest()
                 cached = self.cache.get(code_hash)
                 if cached:
+                    self._record_history(trimmed, cached)
                     self._schedule_result(cached)
                     return
                 result = self._run_ai_analysis(trimmed, code_hash)

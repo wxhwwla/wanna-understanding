@@ -54,6 +54,9 @@ def test_save_settings_to_dotenv_roundtrip(tmp_path, monkeypatch) -> None:
         history_enabled=False,
         history_max_entries=25,
         tray_enabled=False,
+        overlay_width=450,
+        overlay_height=320,
+        overlay_opacity=0.9,
     )
     save_settings_to_dotenv(settings)
     text = env_file.read_text(encoding="utf-8")
@@ -65,3 +68,5 @@ def test_save_settings_to_dotenv_roundtrip(tmp_path, monkeypatch) -> None:
     assert reloaded.poll_interval == 2.5
     assert reloaded.history_enabled is False
     assert reloaded.tray_enabled is False
+    assert reloaded.overlay_width == 450
+    assert reloaded.overlay_opacity == 0.9

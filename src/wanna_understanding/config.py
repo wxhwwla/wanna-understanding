@@ -138,6 +138,9 @@ def _settings_env_map(settings: Settings) -> dict[str, str]:
         "WU_HISTORY_ENABLED": _format_env_value(settings.history_enabled),
         "WU_HISTORY_MAX_ENTRIES": _format_env_value(settings.history_max_entries),
         "WU_TRAY_ENABLED": _format_env_value(settings.tray_enabled),
+        "WU_OVERLAY_WIDTH": _format_env_value(settings.overlay_width),
+        "WU_OVERLAY_HEIGHT": _format_env_value(settings.overlay_height),
+        "WU_OVERLAY_OPACITY": _format_env_value(settings.overlay_opacity),
     }
 
 

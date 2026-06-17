@@ -50,11 +50,11 @@ python -m wanna_understanding --smoke
 
 默认 **流式输出** AI 回复；关闭：`$env:WU_STREAM_OUTPUT = "false"`。
 
-**自定义监控区域**（框选后写入 `.env`）：
+**自定义监控区域**（设置内「框选监控区域」或 CLI）：
 
 ```powershell
 python scripts/pick_region.py
-# 输出 WU_MONITOR_MODE=custom 与 WU_MONITOR_RECT=left,top,width,height
+# 或 Ctrl+Shift+S 打开设置 → 框选监控区域
 ```
 
 **UI Automation**（可选，传统 Win32 编辑器效果更好）：
