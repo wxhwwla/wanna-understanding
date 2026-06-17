@@ -1,10 +1,13 @@
-# IDE / 编辑器
-.idea/
+# AI / IDE 规则文件（个人配置，不提交）
+.trae/
+.agents/
+.claude/
+.cursorrules
+.vscode/
+AGENTS.md
+CLAUDE.md
 *.swp
 *~
-
-# Claude AI（仅本地设置不提交）
-.claude/settings.local.json
 
 # Skills 锁文件
 skills-lock.json
