@@ -25,9 +25,28 @@ def test_extract_code_text_prefers_uia_when_enabled() -> None:
         use_uia=True,
         ocr=ocr,
         uia=uia,
+        window_title="Notepad",
     )
     assert text == "uia text"
     ocr.extract_text.assert_not_called()
+
+
+def test_extract_code_text_skips_uia_for_cursor() -> None:
+    image = Image.new("RGB", (10, 10))
+    ocr = MagicMock()
+    ocr.extract_text.return_value = "ocr text"
+    uia = MagicMock()
+    uia.extract_text.return_value = "uia text"
+    text = extract_code_text(
+        hwnd=1,
+        image=image,
+        use_uia=True,
+        ocr=ocr,
+        uia=uia,
+        window_title="foo.py - Cursor",
+    )
+    assert text == "ocr text"
+    uia.extract_text.assert_not_called()
 
 
 def test_extract_code_text_falls_back_to_ocr() -> None:

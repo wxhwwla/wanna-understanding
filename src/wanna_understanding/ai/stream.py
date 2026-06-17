@@ -34,10 +34,17 @@ def parse_sse_data_payload(payload: str) -> tuple[bool, str]:
     return False, extract_delta_from_chunk(chunk)
 
 
-def iter_sse_deltas(lines: Iterator[bytes]) -> Iterator[str]:
+def _line_to_text(raw: bytes | str) -> str:
+    """兼容 httpx 不同版本：iter_lines 可能返回 bytes 或 str。"""
+    if isinstance(raw, str):
+        return raw.strip()
+    return raw.decode("utf-8").strip()
+
+
+def iter_sse_deltas(lines: Iterator[bytes | str]) -> Iterator[str]:
     """从 httpx 流式响应行迭代文本增量。"""
     for raw in lines:
-        line = raw.decode("utf-8").strip()
+        line = _line_to_text(raw)
         if not line.startswith("data:"):
             continue
         payload = line[5:].strip()

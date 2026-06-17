@@ -44,6 +44,10 @@ class OCREngine:
             )
         return self._recognizer
 
+    def warmup(self) -> None:
+        """预加载 OCR 模型，避免首次分析长时间无响应。"""
+        self._ensure_recognizer().warmup()
+
     def recognize(
         self,
         image: Image.Image,

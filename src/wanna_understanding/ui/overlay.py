@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+import sys
+
 from wanna_understanding import tcl_bootstrap as _tcl_bootstrap  # noqa: F401
 
 import tkinter as tk
@@ -39,7 +41,7 @@ class OverlayWindow:
 
         self._title = tk.Label(
             self.root,
-            text="Wanna Understanding  (H/J/S: 隐藏/历史/设置)",
+            text="Wanna Understanding  (H/J/O 快捷键 | 托盘可设置)",
             bg="#1e1e1e",
             fg="#cccccc",
             font=tkfont.Font(family="Segoe UI", size=10, weight="bold"),
@@ -51,6 +53,7 @@ class OverlayWindow:
         self._title.bind("<Button-1>", self._start_drag)
         self._title.bind("<B1-Motion>", self._on_drag)
         self._title.bind("<Double-Button-1>", lambda _e: self.toggle_visibility())
+        self.root.bind("<Escape>", self._on_escape)
 
         self.text = tk.Text(
             self.root,
@@ -71,6 +74,30 @@ class OverlayWindow:
         self._poll_after_id: str | None = None
         self._poll_interval_ms = 2000
         self._poll_callback: Callable[[], None] | None = None
+        self.root.update_idletasks()
+        self.apply_no_activate()
+
+    @property
+    def hwnd(self) -> int:
+        """Windows 窗口句柄（用于忽略自身前台检测）。"""
+        return int(self.root.winfo_id())
+
+    def apply_no_activate(self) -> None:
+        """点击悬浮窗时不抢焦点，避免 Esc / 快捷键在编辑器失效。"""
+        if sys.platform != "win32":
+            return
+        import ctypes
+
+        hwnd = self.hwnd
+        gwl_exstyle = -20
+        ws_ex_noactivate = 0x08000000
+        user32 = ctypes.windll.user32
+        style = user32.GetWindowLongW(hwnd, gwl_exstyle)
+        user32.SetWindowLongW(hwnd, gwl_exstyle, style | ws_ex_noactivate)
+
+    def _on_escape(self, _event: tk.Event) -> str:
+        """Esc 不关闭程序，仅忽略（避免误触隐藏）。"""
+        return "break"
 
     @property
     def is_visible(self) -> bool:

@@ -8,6 +8,8 @@ from PIL import Image, ImageOps
 
 from .profiles import EditorOCRProfile
 
+_MAX_OCR_EDGE = 1600
+
 
 class ImagePreprocessor:
     """OCR 前的图像预处理链。"""
@@ -16,6 +18,17 @@ class ImagePreprocessor:
         """放大图像，提升小字号 OCR 准确率。"""
         factor = max(1.0, factor)
         new_size = (int(image.width * factor), int(image.height * factor))
+        enlarged = image.resize(new_size, Image.Resampling.LANCZOS)
+        return self._clamp_size(enlarged)
+
+    def _clamp_size(self, image: Image.Image, max_edge: int = _MAX_OCR_EDGE) -> Image.Image:
+        """限制最长边，避免大图 OCR 在 CPU 上过慢。"""
+        width, height = image.size
+        longest = max(width, height)
+        if longest <= max_edge:
+            return image
+        scale = max_edge / longest
+        new_size = (max(1, int(width * scale)), max(1, int(height * scale)))
         return image.resize(new_size, Image.Resampling.LANCZOS)
 
     def grayscale(self, image: Image.Image) -> Image.Image:

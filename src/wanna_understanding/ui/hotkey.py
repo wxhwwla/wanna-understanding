@@ -31,5 +31,5 @@ def hotkey_history_pressed() -> bool:
 
 
 def hotkey_settings_pressed() -> bool:
-    """Ctrl+Shift+S — 打开设置。"""
-    return _ctrl_shift_key_pressed(0x53)
+    """Ctrl+Shift+S 或 Ctrl+Shift+O — 打开设置。"""
+    return _ctrl_shift_key_pressed(0x53) or _ctrl_shift_key_pressed(0x4F)

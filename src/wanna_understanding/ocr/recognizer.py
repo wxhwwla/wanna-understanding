@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -76,10 +77,18 @@ class OCRRecognizer:
         self._min_confidence = min_confidence
         self._term_dict = term_dict or {}
         self._reader = reader
+        self._reader_lock = threading.Lock()
+
+    def warmup(self) -> None:
+        """预加载 EasyOCR 模型（首次调用可能较慢）。"""
+        self._ensure_reader()
 
     def _ensure_reader(self) -> Any:
-        if self._reader is None:
-            self._reader = easyocr.Reader(self._lang, gpu=self._gpu)
+        if self._reader is not None:
+            return self._reader
+        with self._reader_lock:
+            if self._reader is None:
+                self._reader = easyocr.Reader(self._lang, gpu=self._gpu)
         return self._reader
 
     def recognize(self, image_path: str | Path) -> OCRResult:

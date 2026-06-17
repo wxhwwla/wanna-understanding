@@ -85,6 +85,10 @@ class Application:
         self._history_hotkey_was_down = False
         self._settings_hotkey_was_down = False
         self._settle_deadline: float | None = None
+        self._ocr_ready = threading.Event()
+        self._overlay_hwnd = 0
+        self._monitor_hwnd = 0
+        self._monitor_title = ""
         self.watcher = ContentWatcher(
             hash_provider=self._capture_hash,
             debounce_delay=self.settings.debounce_delay,
@@ -99,6 +103,8 @@ class Application:
             int(self.settings.poll_interval * 1000),
             self._on_poll,
         )
+        self._overlay_hwnd = self.overlay.hwnd
+        self._start_hotkey_loop()
         if self.settings.tray_enabled:
             self._tray = TrayController(
                 on_toggle=self._tray_toggle_overlay,
@@ -108,6 +114,7 @@ class Application:
                 schedule=self.overlay.schedule,
             )
             self._tray.start()
+        threading.Thread(target=self._warmup_ocr, daemon=True).start()
         try:
             self.overlay.mainloop()
         finally:
@@ -122,8 +129,10 @@ class Application:
             f"轮询间隔：{self.settings.poll_interval}s",
             f"防抖延迟：{self.settings.debounce_delay}s",
             f"局部发送：最多 {self.settings.context_max_lines} 行",
-            "快捷键：Ctrl+Shift+H 显示/隐藏 | J 历史 | S 设置",
+            "快捷键：Ctrl+Shift+H 显示/隐藏 | J 历史 | O 设置",
         ]
+        if self.settings.tray_enabled:
+            lines.append("也可：托盘右键 → 设置 / 退出")
         if self.settings.stream_output:
             lines.append("AI 输出：流式")
         elif not self.settings.stream_output:
@@ -150,13 +159,27 @@ class Application:
     def _clear_settle_deadline(self) -> None:
         self._settle_deadline = None
 
+    def _warmup_ocr(self) -> None:
+        """后台预加载 EasyOCR，避免首次分析卡在「正在识别代码」。"""
+        self._schedule_status("正在加载 OCR 模型（首次约 1–3 分钟，请稍候）…")
+        try:
+            self.ocr.warmup()
+        except Exception as exc:
+            self._schedule_status(
+                f"OCR 加载失败：{exc}\n"
+                "请运行：python scripts/ocr_download_models.py"
+            )
+            return
+        self._ocr_ready.set()
+        self._schedule_status(self._startup_message())
+
     def _on_poll(self) -> None:
         try:
-            self._handle_hotkey()
-            hwnd, title = get_foreground_window_info()
-            if not is_window_visible(hwnd):
+            target = self._resolve_monitor_target()
+            if target is None:
                 self.overlay.hide()
                 return
+            hwnd, title = target
             if self.watcher.on_window_changed(hwnd):
                 self.cache.clear()
                 self._arm_settle_deadline()
@@ -187,6 +210,33 @@ class Application:
                 self._start_analysis()
         except Exception as exc:
             self.overlay.show_status(f"监控异常：{exc}")
+
+    def _resolve_monitor_target(self) -> tuple[int, str] | None:
+        """解析应监控的编辑器窗口；忽略本程序自己的悬浮窗/对话框。"""
+        hwnd, title = get_foreground_window_info()
+        if self._is_own_window(hwnd, title):
+            if self._monitor_hwnd and is_window_visible(self._monitor_hwnd):
+                return self._monitor_hwnd, self._monitor_title
+            return None
+        if not is_window_visible(hwnd):
+            return None
+        self._monitor_hwnd = hwnd
+        self._monitor_title = title
+        return hwnd, title
+
+    def _is_own_window(self, hwnd: int, title: str) -> bool:
+        if hwnd == self._overlay_hwnd:
+            return True
+        return title in {"Wanna Understanding", "设置"}
+
+    def _start_hotkey_loop(self) -> None:
+        """独立高频轮询快捷键（避免与屏幕轮询同频导致漏键）。"""
+
+        def _loop() -> None:
+            self._handle_hotkey()
+            self.overlay.root.after(120, _loop)
+
+        self.overlay.root.after(120, _loop)
 
     def _handle_hotkey(self) -> None:
         if self.settings.hotkey_toggle:
@@ -300,11 +350,29 @@ class Application:
         if self._latest_image is None:
             return
         self._analyzing = True
+        if not self._ocr_ready.is_set():
+            self.overlay.show_status("正在加载 OCR 模型，请稍候…")
+        else:
+            self.overlay.show_status("正在识别代码…")
         image = self._latest_image.copy()
-        self.overlay.show_status("正在识别代码…")
 
         def work() -> None:
+            stop_heartbeat = threading.Event()
+            started = time.monotonic()
+
+            def heartbeat() -> None:
+                while not stop_heartbeat.wait(3.0):
+                    elapsed = int(time.monotonic() - started)
+                    self._schedule_status(
+                        f"正在识别代码…（已 {elapsed}s，CPU 首次较慢属正常）"
+                    )
+
+            pulse = threading.Thread(target=heartbeat, daemon=True)
+            pulse.start()
             try:
+                if not self._ocr_ready.is_set():
+                    self.ocr.warmup()
+                    self._ocr_ready.set()
                 profile = detect_editor_profile(
                     self._latest_title,
                     image,
@@ -318,6 +386,7 @@ class Application:
                     use_uia=self.settings.use_uia,
                     ocr=self._ocr_extractor,
                     uia=self._uia_extractor,
+                    window_title=self._latest_title,
                     profile=profile,
                     is_dark_theme=is_dark,
                 )
@@ -341,6 +410,7 @@ class Application:
                 detail = traceback.format_exc(limit=2)
                 self._schedule_status(f"分析失败：{exc}\n\n{detail}")
             finally:
+                stop_heartbeat.set()
                 self._analyzing = False
 
         threading.Thread(target=work, daemon=True).start()
@@ -432,6 +502,7 @@ def run_smoke_test(settings: Settings | None = None) -> int:
         use_uia=cfg.use_uia,
         ocr=ocr_extractor,
         uia=uia_extractor,
+        window_title=title,
         profile=profile,
         is_dark_theme=is_dark,
     )

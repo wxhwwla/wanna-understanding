@@ -13,6 +13,15 @@ if TYPE_CHECKING:
     from wanna_understanding.ocr.profiles import EditorOCRProfile
 
 
+_ELECTRON_EDITOR_HINTS = ("visual studio code", "cursor", "vscode")
+
+
+def _is_electron_editor(window_title: str) -> bool:
+    """Electron 编辑器 UIA 通常不可用且扫描很慢。"""
+    lowered = window_title.casefold()
+    return any(hint in lowered for hint in _ELECTRON_EDITOR_HINTS)
+
+
 class TextExtractor(Protocol):
     """从屏幕或窗口提取代码文本。"""
 
@@ -112,11 +121,12 @@ def extract_code_text(
     use_uia: bool,
     ocr: OCRTextExtractor,
     uia: UIAutomationTextExtractor | None = None,
+    window_title: str = "",
     profile: EditorOCRProfile | None = None,
     is_dark_theme: bool = False,
 ) -> str:
     """按策略链提取代码：UIA（可选）→ OCR。"""
-    if use_uia and uia is not None:
+    if use_uia and uia is not None and not _is_electron_editor(window_title):
         uia_text = uia.extract_text(
             hwnd,
             image,
