@@ -6,6 +6,9 @@
 # Claude AI（仅本地设置不提交）
 .claude/settings.local.json
 
+# Skills 锁文件
+skills-lock.json
+
 # Python 缓存与包元数据
 __pycache__/
 *.py[cod]
@@ -25,30 +28,43 @@ node_modules/
 
 # 测试 / 覆盖率
 .pytest_cache/
-.benchmarks/
+pytest-cache-files-*/
 .coverage
+.cov75
 cov_report.txt
+coverage.xml
 htmlcov/
 .tox/
 .nox/
 .mypy_cache/
 .ruff_cache/
+.benchmarks/
 
 # 构建输出
 build/
 dist/
+*.spec
 *.exe
 
 # 日志
 *.log
 
+# 上传脚本临时文件
+.git-upload-msg.txt
+
+# 本地 .git 快照（Minor 上传前自动备份，勿提交）
+git_backup/snapshots/
+
+# 一次性临时工具/扫描产物
+output/
+
+# 运行时用户偏好（不应跟踪）
+ui_preferences.json
+
 # 环境与密钥（勿提交）
 .env
 .env.*
 git_key.txt
-
-# 上传脚本临时文件
-.git-upload-msg.txt
 
 # 系统文件
 Thumbs.db
@@ -58,5 +74,11 @@ Desktop.ini
 # 压缩包
 *.zip
 *.tar.gz
-*.spec
+
+# 本地数据库（若将来使用）
+*.sqlite3
+*.db
+
+# WASM 二进制
+*.wasm
 debug.log

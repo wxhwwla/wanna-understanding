@@ -1,0 +1,115 @@
+# Wanna Understanding — Cursor 项目规则
+
+> **完整权威规则位于 `.trae/rules/project_rules.md`。**
+> 本文档是从主规则文件同步的 Cursor 兼容版本。
+
+---
+
+## 项目速览
+
+Wanna Understanding = 桌面 AI 代码审阅员
+- 始终在后台运行，只读不写，不修改代码
+- 自动监控屏幕上可见的代码，分析其功能和潜在 Bug
+- 不绑定特定编辑器（OCR 截图识别，适用任何窗口）
+- 零操作、自动跟随滚动/切换
+- Python MVP -> 未来 C#/Rust 迁移
+
+---
+
+## 会话接续
+
+每次新对话开始时，必须先读取：
+1. `docs/会话接续手册.md` — 项目状态、架构接缝、近期工作
+2. `docs/项目目标.md` — 长远愿景和当前焦点
+3. `docs/技术方案.md` — 模块设计、接口约定、数据流
+
+## 先行阅读
+
+| 文档 | 何时读 |
+|------|--------|
+| `docs/技术方案.md` | 首次编码前必读 |
+| `docs/代码结构规范.md` | 结构性重构或新增模块前 |
+| `docs/错误集.md` | 每次报告 Bug 或问题时 |
+| `docs/依赖说明.md` | 新增依赖前 |
+| `CONTEXT.md` | 领域术语查询 |
+
+## Git 操作
+
+**所有 git 暂存、提交、推送必须通过 `python github_upload_module.py` 进行。**
+Agent 不得直接执行 `git add`、`git commit`、`git push`。
+
+- 默认由人类执行上传，Agent 告知应执行的命令
+- 版本号 `_VERSION` 必须通过上传脚本更新
+- 下载脚本 `github_download_module.py` 须确认词 `覆盖本地`
+
+## 禁止的操作
+
+| 操作 | 原因 |
+|------|------|
+| `git rm` / `git rm --cached` | 永久删除历史文件 |
+| `del` / `rm -rf` | 可能误删重要代码 |
+| `git checkout --` / `git reset --hard` | 不可逆丢失代码 |
+| `git push` | 影响协作者 |
+
+## 代码规范
+
+### 导入排序
+四组顺序，组间空行：
+```
+组 0：from __future__ import annotations
+组 1：标准库
+组 2：第三方库
+组 3：本地应用
+```
+
+### 公共 API
+每个 `__init__.py` 必须声明 `__all__` 确定公共 API 边界。
+
+### 文档字符串
+Google 风格，中文。公共 API 和长函数（>=40 行）必须写。
+
+### 目录与文件
+- 目录直接子项 <= 20（硬顶），目标 <= 15
+- 单文件 <= 400 行（硬顶 500）
+
+### 命名
+- Python：`snake_case`
+- 类：`PascalCase`
+- 常量：`UPPER_SNAKE_CASE`
+- 注释：中文
+
+### 测试
+- 函数 `test_` 前缀，类 `TestXxx` 前缀
+- Fixture 分三级
+- 慢测用 `@pytest.mark.slow` / `integration`
+
+## 严重程度标签
+
+| 标签 | 含义 |
+|------|------|
+| `[SEV-OK]` | 无问题 |
+| `[SEV-LOW]` | 外观、风格、轻微重构 |
+| `[SEV-MED]` | 逻辑 Bug、边界情况、潜在回归 |
+| `[SEV-HIGH]` | 静默数据丢失、计算结果错误 |
+
+## 错误集优先查阅
+
+报告 Bug 时先查 `docs/错误集.md`，禁止不查就开始诊断。
+
+## 任务管理
+
+- 开始任务前写入 `.trae/plans/当前任务计划.md`
+- 完成后删除计划文件
+- 完成后更新相关文档（会话接续手册、操作指令集、错误集等）
+
+## 开发流程
+
+默认走 design-then-build：
+1. 先厘清设计
+2. TDD 实现（测试先行）
+3. 低风险自动同意，高风险先问用户
+
+## 规则同步
+
+主文件：`.trae/rules/project_rules.md` 是权威源。
+本文档（`.cursorrules`）从主文件同步，修改规则时需同步更新。
