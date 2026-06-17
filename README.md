@@ -44,6 +44,13 @@ python -m wanna_understanding --smoke
 
 默认 **流式输出** AI 回复；关闭：`$env:WU_STREAM_OUTPUT = "false"`。
 
+**打包**（需 `pip install -e ".[build,ocr]"`）：
+
+```powershell
+python scripts/build_exe.py
+# 输出 dist/WannaUnderstanding/WannaUnderstanding.exe
+```
+
 > **venv 损坏？** 双击 `修复venv.bat` 重建虚拟环境并重新安装依赖。
 
 ---

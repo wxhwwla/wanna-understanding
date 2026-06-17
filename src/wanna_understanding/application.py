@@ -16,11 +16,18 @@ from wanna_understanding.ai.client import AIClient
 from wanna_understanding.ai.context import trim_to_context
 from wanna_understanding.config import Settings, load_settings
 from wanna_understanding.ocr.engine import OCREngine
+from wanna_understanding.ocr.profiles import detect_editor_profile
 from wanna_understanding.ocr.theme import detect_dark_theme
+from wanna_understanding.screen.capture_plan import build_monitor_region
 from wanna_understanding.screen.capturer import ScreenCapturer
+from wanna_understanding.screen.region import WindowRegion
+from wanna_understanding.screen.text_extract import (
+    OCRTextExtractor,
+    UIAutomationTextExtractor,
+    extract_code_text,
+)
 from wanna_understanding.screen.window import (
     get_foreground_window_info,
-    get_window_client_region,
     is_window_visible,
 )
 from wanna_understanding.trigger.watcher import ContentWatcher
@@ -47,6 +54,10 @@ class Application:
             opacity=self.settings.overlay_opacity,
         )
         self._latest_image: Image.Image | None = None
+        self._latest_title: str = ""
+        self._latest_hwnd: int = 0
+        self._ocr_extractor = OCRTextExtractor(self.ocr)
+        self._uia_extractor = UIAutomationTextExtractor()
         self._analyzing = False
         self._hotkey_was_down = False
         self.watcher = ContentWatcher(
@@ -79,6 +90,10 @@ class Application:
             lines.append("AI 输出：完整等待模式")
         if self.settings.auto_dark_theme:
             lines.append("深色主题：自动检测")
+        if self.settings.monitor_mode == "custom":
+            lines.append(f"监控模式：自定义区域 ({self.settings.monitor_rect or '未配置'})")
+        if self.settings.use_uia:
+            lines.append("文本提取：UI Automation 优先")
         if not self.settings.has_api_key:
             lines.append("")
             lines.append("提示：未配置 DEEPSEEK_API_KEY，将仅展示 OCR 状态。")
@@ -94,7 +109,7 @@ class Application:
             if self.watcher.on_window_changed(hwnd):
                 self.cache.clear()
                 self.overlay.show_status(f"已切换窗口：{title}\n等待内容稳定…")
-            region = get_window_client_region(hwnd)
+            region = self._build_capture_region(hwnd, title)
             rect = (
                 region.x,
                 region.y,
@@ -119,17 +134,35 @@ class Application:
                 self.overlay.show_status("悬浮窗已隐藏（Ctrl+Shift+H 恢复）")
         self._hotkey_was_down = pressed
 
+    def _build_capture_region(self, hwnd: int, title: str) -> WindowRegion:
+        return build_monitor_region(
+            hwnd,
+            title,
+            monitor_mode=self.settings.monitor_mode,
+            monitor_rect=self.settings.monitor_rect,
+            crop_ratio=self.settings.crop_ratio,
+            editor_profile=self.settings.editor_profile,
+        )
+
     def _capture_hash(self) -> str:
-        hwnd, _title = get_foreground_window_info()
+        hwnd, title = get_foreground_window_info()
         if not is_window_visible(hwnd):
             return ""
-        region = get_window_client_region(hwnd).center_crop(self.settings.crop_ratio)
+        self._latest_hwnd = hwnd
+        self._latest_title = title
+        region = self._build_capture_region(hwnd, title)
         image = self.capturer.capture(region)
         self._latest_image = image
         return ScreenCapturer.hash_image(image)
 
-    def _resolve_dark_theme(self, image: Image.Image) -> bool:
+    def _resolve_dark_theme(self, image: Image.Image, profile_name: str) -> bool:
+        if profile_name.endswith("_dark"):
+            return True
+        if profile_name.endswith("_light"):
+            return False
         if self.settings.auto_dark_theme:
+            from wanna_understanding.ocr.theme import detect_dark_theme
+
             return detect_dark_theme(image)
         return self.settings.dark_theme
 
@@ -142,8 +175,22 @@ class Application:
 
         def work() -> None:
             try:
-                dark = self._resolve_dark_theme(image)
-                code = self.ocr.recognize(image, is_dark_theme=dark)
+                profile = detect_editor_profile(
+                    self._latest_title,
+                    image,
+                    auto_dark_theme=self.settings.auto_dark_theme,
+                    forced=self.settings.editor_profile,
+                )
+                is_dark = self._resolve_dark_theme(image, profile.name)
+                code = extract_code_text(
+                    hwnd=self._latest_hwnd,
+                    image=image,
+                    use_uia=self.settings.use_uia,
+                    ocr=self._ocr_extractor,
+                    uia=self._uia_extractor,
+                    profile=profile,
+                    is_dark_theme=is_dark,
+                )
                 if not code.strip():
                     self._schedule_status(
                         "未识别到有效代码，请确保编辑器中有可见代码。"
@@ -211,11 +258,42 @@ def run_smoke_test(settings: Settings | None = None) -> int:
     if not is_window_visible(hwnd):
         print("窗口不可见或已最小化。")
         return 1
-    region = get_window_client_region(hwnd).center_crop(cfg.crop_ratio)
+    region = build_monitor_region(
+        hwnd,
+        title,
+        monitor_mode=cfg.monitor_mode,
+        monitor_rect=cfg.monitor_rect,
+        crop_ratio=cfg.crop_ratio,
+        editor_profile=cfg.editor_profile,
+    )
     image = capturer.capture(region)
-    dark = detect_dark_theme(image) if cfg.auto_dark_theme else cfg.dark_theme
-    print(f"主题检测: {'深色' if dark else '浅色'}")
-    code = ocr.recognize(image, is_dark_theme=dark)
+    ocr_extractor = OCRTextExtractor(ocr)
+    uia_extractor = UIAutomationTextExtractor()
+    profile = detect_editor_profile(
+        title,
+        image,
+        auto_dark_theme=cfg.auto_dark_theme,
+        forced=cfg.editor_profile,
+    )
+    is_dark = (
+        profile.name.endswith("_dark")
+        or (
+            profile.name == "generic"
+            and (detect_dark_theme(image) if cfg.auto_dark_theme else cfg.dark_theme)
+        )
+    )
+    print(f"编辑器配置: {profile.name}（{'深色' if is_dark else '浅色'}）")
+    if cfg.use_uia:
+        print("文本提取: UIA 优先")
+    code = extract_code_text(
+        hwnd=hwnd,
+        image=image,
+        use_uia=cfg.use_uia,
+        ocr=ocr_extractor,
+        uia=uia_extractor,
+        profile=profile,
+        is_dark_theme=is_dark,
+    )
     print("--- OCR 结果 ---")
     print(code or "(空)")
     trimmed = trim_to_context(code, cfg.context_max_lines)

@@ -6,6 +6,8 @@ from __future__ import annotations
 
 from PIL import Image, ImageOps
 
+from .profiles import EditorOCRProfile
+
 
 class ImagePreprocessor:
     """OCR 前的图像预处理链。"""
@@ -19,6 +21,14 @@ class ImagePreprocessor:
     def grayscale(self, image: Image.Image) -> Image.Image:
         """转为灰度图。"""
         return ImageOps.grayscale(image)
+
+    def adaptive_threshold(self, image: Image.Image) -> int:
+        """根据灰度中位数计算自适应二值化阈值。"""
+        gray = image.convert("L")
+        pixels = list(gray.get_flattened_data())
+        if not pixels:
+            return 128
+        return int(sorted(pixels)[len(pixels) // 2])
 
     def binarize(self, image: Image.Image, threshold: int = 128) -> Image.Image:
         """二值化，减弱语法高亮背景干扰。"""
@@ -42,10 +52,20 @@ class ImagePreprocessor:
             image = image.convert("L")
         return ImageOps.invert(image)
 
-    def process(self, image: Image.Image, is_dark_theme: bool = False) -> Image.Image:
+    def process(
+        self,
+        image: Image.Image,
+        is_dark_theme: bool = False,
+        profile: EditorOCRProfile | None = None,
+    ) -> Image.Image:
         """执行完整预处理管线。"""
-        result = self.upscale(image, factor=2.0)
+        factor = profile.upscale_factor if profile else 2.0
+        result = self.upscale(image, factor=factor)
         result = self.grayscale(result)
         if is_dark_theme:
             result = self.invert(result)
-        return self.binarize(result)
+        if profile and profile.binarize_threshold is not None:
+            threshold = profile.binarize_threshold
+        else:
+            threshold = self.adaptive_threshold(result)
+        return self.binarize(result, threshold=threshold)

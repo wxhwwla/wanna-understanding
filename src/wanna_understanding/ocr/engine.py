@@ -9,6 +9,7 @@ import re
 from PIL import Image
 
 from .preprocess import ImagePreprocessor
+from .profiles import EditorOCRProfile
 from .recognizer import OCRRecognizer
 
 _SYMBOL_FIXES: tuple[tuple[str, str], ...] = (
@@ -43,9 +44,18 @@ class OCREngine:
             )
         return self._recognizer
 
-    def recognize(self, image: Image.Image, is_dark_theme: bool = False) -> str:
+    def recognize(
+        self,
+        image: Image.Image,
+        is_dark_theme: bool = False,
+        profile: EditorOCRProfile | None = None,
+    ) -> str:
         """识别图像中的文本并返回后处理后的代码字符串。"""
-        processed = self._preprocessor.process(image, is_dark_theme=is_dark_theme)
+        processed = self._preprocessor.process(
+            image,
+            is_dark_theme=is_dark_theme,
+            profile=profile,
+        )
         result = self._ensure_recognizer().recognize_image(processed)
         lines = [
             item.text

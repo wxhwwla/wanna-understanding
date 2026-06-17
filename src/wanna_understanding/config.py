@@ -40,6 +40,10 @@ class Settings(BaseModel):
     hotkey_toggle: bool = True
     stream_output: bool = True
     stream_ui_interval: float = Field(default=0.1, ge=0.05, le=1.0)
+    editor_profile: str = "auto"
+    monitor_mode: str = "window"
+    monitor_rect: str = ""
+    use_uia: bool = False
     overlay_width: int = Field(default=400, ge=200, le=1200)
     overlay_height: int = Field(default=300, ge=150, le=900)
     overlay_opacity: float = Field(default=0.85, gt=0.1, le=1.0)
@@ -79,6 +83,10 @@ class Settings(BaseModel):
             hotkey_toggle=cls._parse_bool(os.getenv("WU_HOTKEY_TOGGLE", "true")),
             stream_output=cls._parse_bool(os.getenv("WU_STREAM_OUTPUT", "true")),
             stream_ui_interval=float(os.getenv("WU_STREAM_UI_INTERVAL", "0.1")),
+            editor_profile=os.getenv("WU_EDITOR_PROFILE", "auto"),
+            monitor_mode=os.getenv("WU_MONITOR_MODE", "window"),
+            monitor_rect=os.getenv("WU_MONITOR_RECT", ""),
+            use_uia=cls._parse_bool(os.getenv("WU_USE_UIA", "false")),
             overlay_width=int(os.getenv("WU_OVERLAY_WIDTH", "400")),
             overlay_height=int(os.getenv("WU_OVERLAY_HEIGHT", "300")),
             overlay_opacity=float(os.getenv("WU_OVERLAY_OPACITY", "0.85")),

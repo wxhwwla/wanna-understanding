@@ -9,6 +9,7 @@ from collections.abc import Callable
 from tkinter import font as tkfont
 
 from wanna_understanding.ai.cache import AnalysisResult
+from wanna_understanding.screen.monitor import get_work_area_for_rect
 
 from .position import compute_overlay_position
 
@@ -82,21 +83,14 @@ class OverlayWindow:
         y = event.y_root - self._drag_offset[1]
         self.root.geometry(f"{self.width}x{self.height}+{x}+{y}")
 
-    def _screen_size(self) -> tuple[int, int]:
-        return (
-            int(self.root.winfo_screenwidth()),
-            int(self.root.winfo_screenheight()),
-        )
-
     def show_near(self, window_rect: tuple[int, int, int, int]) -> None:
         """在目标窗口旁定位悬浮窗，空间不足时自动翻到左侧。"""
-        screen_w, screen_h = self._screen_size()
+        work_area = get_work_area_for_rect(window_rect)
         x, y = compute_overlay_position(
             window_rect,
             self.width,
             self.height,
-            screen_w,
-            screen_h,
+            work_area,
         )
         self.root.geometry(f"{self.width}x{self.height}+{x}+{y}")
         if self._visible:
