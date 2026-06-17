@@ -42,6 +42,8 @@ python -m wanna_understanding --smoke
 
 **快捷键**：`Ctrl+Shift+H` 显示/隐藏悬浮窗（双击标题栏亦可）。
 
+默认 **流式输出** AI 回复；关闭：`$env:WU_STREAM_OUTPUT = "false"`。
+
 > **venv 损坏？** 双击 `修复venv.bat` 重建虚拟环境并重新安装依赖。
 
 ---

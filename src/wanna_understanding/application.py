@@ -26,6 +26,7 @@ from wanna_understanding.screen.window import (
 from wanna_understanding.trigger.watcher import ContentWatcher
 from wanna_understanding.ui.hotkey import hotkey_toggle_pressed
 from wanna_understanding.ui.overlay import OverlayWindow
+from wanna_understanding.ui.streaming import StreamUpdateThrottler
 
 
 class Application:
@@ -72,6 +73,10 @@ class Application:
             f"局部发送：最多 {self.settings.context_max_lines} 行",
             "快捷键：Ctrl+Shift+H 显示/隐藏",
         ]
+        if self.settings.stream_output:
+            lines.append("AI 输出：流式")
+        elif not self.settings.stream_output:
+            lines.append("AI 输出：完整等待模式")
         if self.settings.auto_dark_theme:
             lines.append("深色主题：自动检测")
         if not self.settings.has_api_key:
@@ -150,8 +155,7 @@ class Application:
                 if cached:
                     self._schedule_result(cached)
                     return
-                self._schedule_status("正在调用 AI 分析…")
-                result = self.ai.analyze(trimmed, code_hash=code_hash)
+                result = self._run_ai_analysis(trimmed, code_hash)
                 self.cache.put(code_hash, result)
                 self._schedule_result(result)
             except Exception as exc:
@@ -161,6 +165,31 @@ class Application:
                 self._analyzing = False
 
         threading.Thread(target=work, daemon=True).start()
+
+    def _run_ai_analysis(self, code: str, code_hash: str) -> AnalysisResult:
+        """调用 AI；流式模式下边生成边刷新悬浮窗。"""
+        if not self.settings.stream_output:
+            self._schedule_status("正在调用 AI 分析…")
+            return self.ai.analyze(code, code_hash=code_hash)
+
+        throttler = StreamUpdateThrottler(
+            emit=lambda text: self.overlay.schedule(
+                lambda t=text: self.overlay.show_streaming(t)
+            ),
+            min_interval=self.settings.stream_ui_interval,
+        )
+
+        def on_delta(_delta: str, accumulated: str) -> None:
+            throttler.push(accumulated)
+
+        self.overlay.schedule(lambda: self.overlay.show_streaming(""))
+        result = self.ai.analyze_stream(
+            code,
+            on_delta=on_delta,
+            code_hash=code_hash,
+        )
+        throttler.flush()
+        return result
 
     def _schedule_status(self, message: str) -> None:
         self.overlay.schedule(lambda: self.overlay.show_status(message))

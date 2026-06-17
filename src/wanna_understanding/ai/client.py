@@ -7,6 +7,7 @@ from __future__ import annotations
 import hashlib
 import re
 import time
+from collections.abc import Callable
 from typing import Any
 
 import httpx
@@ -15,6 +16,7 @@ from wanna_understanding.config import Settings
 
 from .cache import AnalysisResult
 from .prompt import SYSTEM_PROMPT, build_user_prompt
+from .stream import iter_sse_deltas
 
 _SECTION_PATTERNS: tuple[tuple[str, str], ...] = (
     ("summary", r"功能说明[:：]\s*(.+?)(?=\n潜在\s*Bug[:：]|\n改进建议[:：]|$)"),
@@ -31,7 +33,40 @@ class AIClient:
         self._client = client
 
     def analyze(self, code: str, code_hash: str | None = None) -> AnalysisResult:
-        """分析代码文本并返回结构化结果。"""
+        """分析代码文本并返回结构化结果（非流式）。"""
+        prepared = self._prepare_request(code, code_hash)
+        if isinstance(prepared, AnalysisResult):
+            return prepared
+        digest, _code = prepared
+        raw = self._call_api(_code, stream=False)
+        return self._build_result(digest, raw)
+
+    def analyze_stream(
+        self,
+        code: str,
+        on_delta: Callable[[str, str], None] | None = None,
+        code_hash: str | None = None,
+    ) -> AnalysisResult:
+        """流式分析代码；on_delta 接收 (增量, 累计全文)。"""
+        prepared = self._prepare_request(code, code_hash)
+        if isinstance(prepared, AnalysisResult):
+            return prepared
+        digest, _code = prepared
+        parts: list[str] = []
+
+        def _collect(delta: str) -> None:
+            parts.append(delta)
+            if on_delta is not None:
+                on_delta(delta, "".join(parts))
+
+        raw = self._call_api(_code, stream=True, on_sse_delta=_collect)
+        return self._build_result(digest, raw)
+
+    def _prepare_request(
+        self,
+        code: str,
+        code_hash: str | None,
+    ) -> AnalysisResult | tuple[str, str]:
         if not code.strip():
             return AnalysisResult(
                 code_hash=code_hash or "",
@@ -49,10 +84,12 @@ class AIClient:
                 suggestions=["设置 API Key 后重启程序"],
                 raw_response="",
             )
-        raw = self._call_api(code)
+        return digest, code
+
+    def _build_result(self, code_hash: str, raw: str) -> AnalysisResult:
         parsed = self._parse_response(raw)
         return AnalysisResult(
-            code_hash=digest,
+            code_hash=code_hash,
             summary=parsed["summary"],
             bugs=parsed["bugs"],
             suggestions=parsed["suggestions"],
@@ -65,7 +102,13 @@ class AIClient:
             self._client = httpx.Client(timeout=self._settings.request_timeout)
         return self._client
 
-    def _call_api(self, code: str) -> str:
+    def _call_api(
+        self,
+        code: str,
+        *,
+        stream: bool,
+        on_sse_delta: Callable[[str], None] | None = None,
+    ) -> str:
         url = f"{self._settings.deepseek_api_base.rstrip('/')}/chat/completions"
         payload: dict[str, Any] = {
             "model": self._settings.deepseek_model,
@@ -74,15 +117,28 @@ class AIClient:
                 {"role": "user", "content": build_user_prompt(code)},
             ],
             "temperature": 0.2,
+            "stream": stream,
         }
         headers = {
             "Authorization": f"Bearer {self._settings.deepseek_api_key}",
             "Content-Type": "application/json",
         }
-        response = self._get_client().post(url, json=payload, headers=headers)
-        response.raise_for_status()
-        data = response.json()
-        return str(data["choices"][0]["message"]["content"])
+        if not stream:
+            response = self._get_client().post(url, json=payload, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+            return str(data["choices"][0]["message"]["content"])
+
+        parts: list[str] = []
+        with self._get_client().stream(
+            "POST", url, json=payload, headers=headers
+        ) as response:
+            response.raise_for_status()
+            for delta in iter_sse_deltas(response.iter_lines()):
+                parts.append(delta)
+                if on_sse_delta is not None:
+                    on_sse_delta(delta)
+        return "".join(parts)
 
     def _parse_response(self, raw: str) -> dict[str, Any]:
         summary = "无法确定"

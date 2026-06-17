@@ -130,6 +130,11 @@ class OverlayWindow:
         """显示状态信息。"""
         self._set_text(message)
 
+    def show_streaming(self, partial: str) -> None:
+        """流式展示 AI 回复片段。"""
+        self._set_text(f"正在分析…\n\n{partial}")
+        self.text.see("end")
+
     def schedule(self, callback: Callable[[], None]) -> None:
         """在主线程调度回调。"""
         self.root.after(0, callback)
