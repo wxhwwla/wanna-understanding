@@ -1,0 +1,131 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wanna-understanding"
+version = "0.1.0"
+description = "理解，从数据开始。"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {file = "LICENSE"}
+authors = [
+    {name = "wxhwwla", email = "wxhwwla@gmail.com"},
+]
+
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "mss>=9.0.0",
+    "pywin32>=306",
+    "httpx>=0.27.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.4.0",
+    "pyright>=1.1.300",
+]
+build = [
+]
+test = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/wxhwwla/wanna-understanding"
+Repository = "https://github.com/wxhwwla/wanna-understanding"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["wanna_understanding*"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "D",   # pydocstyle
+    "UP",  # pyupgrade
+    "YTT", # flake8-2020
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+    "ARG", # flake8-unused-arguments
+    "RUF", # ruff-specific rules
+]
+ignore = [
+    "D100",  # Missing docstring in public module (中文项目无强制要求)
+    "D101",  # Missing docstring in public class
+    "D102",  # Missing docstring in public method
+    "D103",  # Missing docstring in public function
+    "D104",  # Missing docstring in public package
+    "D107",  # Missing docstring in __init__
+    "D200",  # One-line docstring should fit on one line
+    "D203",  # 1 blank line required before class docstring
+    "D212",  # Multi-line docstring summary should start at first line
+    "D213",  # Multi-line docstring summary should start at second line
+    "D400",  # First line should end with a period (中文用。不识别)
+    "D401",  # First line should be in imperative mood
+    "D402",  # First line should not be the function's signature
+    "D413",  # Missing blank line after last section
+    "D415",  # First line should end with a period (中文用。不识别)
+    "N818",  # Exception names should end with Error
+    "RUF001",  # String contains ambiguous character (中文标点)
+    "RUF002",  # Docstring contains ambiguous character (中文标点)
+    "RUF003",  # Comment contains ambiguous character (中文注释)
+]
+fixable = ["ALL"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D", "ARG", "N"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-q",
+    "--tb=short",
+    "--strict-config",
+    "--strict-markers",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
+
+[tool.coverage.run]
+source = ["wanna_understanding"]
+omit = ["*/tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "def __repr__",
+    "def __str__",
+]

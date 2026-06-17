@@ -1,0 +1,96 @@
+name: Bug 报告
+description: 报告程序异常行为（OCR 识别错误、AI 分析异常、悬浮窗显示问题等）
+title: "[Bug]: "
+labels:
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请尽量填写完整，便于复现与定位。
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 描述 Bug
+      description: 清晰简洁地描述问题是什么。
+      placeholder: 例如：深色模式下 OCR 识别率明显下降，缩进全部丢失。
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 按顺序列出操作，他人可按此复现。
+      placeholder: |
+        1. 启动 Wanna Understanding
+        2. 打开 VS Code 深色主题
+        3. 滚动到某段包含箭头函数 `=>` 的代码
+        4. 看到识别结果中 `=>` 变成了 `=`
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+      description: 正常情况下应该发生什么？
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 实际发生了什么？
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 截图 / 日志
+      description: 拖拽上传截图，或粘贴终端日志。
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 相关模块
+      options:
+        - 屏幕捕获 / 区域裁剪
+        - OCR 识别 / 预处理
+        - AI 分析 / Prompt
+        - 悬浮窗展示
+        - 触发 / 防抖机制
+        - 配置 / 启动
+        - 其他
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: 操作系统
+      placeholder: "Windows 11 24H2"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: 项目版本
+      description: 版本号或 commit hash
+      placeholder: "v0.1.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充信息
+      description: 编辑器、主题、字体等信息（有助于 OCR 调试）
+    validations:
+      required: false

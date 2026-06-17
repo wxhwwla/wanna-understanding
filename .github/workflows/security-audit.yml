@@ -1,0 +1,35 @@
+# 安全审计 — 依赖漏洞扫描
+name: Security Audit
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "requirements*.txt"
+      - "pyproject.toml"
+      - ".github/workflows/security-audit.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "requirements*.txt"
+      - "pyproject.toml"
+  schedule:
+    - cron: "0 8 * * 1"  # 每周一 8:00 UTC
+
+jobs:
+  pip-audit:
+    name: pip-audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pip-audit
+        run: python -m pip install --upgrade pip pip-audit
+      - name: Install project
+        run: pip install -e ".[dev]"
+      - name: Run pip-audit
+        run: pip-audit

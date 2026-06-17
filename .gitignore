@@ -1,0 +1,63 @@
+# IDE / 编辑器
+.idea/
+.trae/
+*.swp
+*~
+
+# Claude AI（仅本地设置不提交）
+.claude/settings.local.json
+
+# Python 缓存与包元数据
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+*.egg
+.eggs/
+pip-wheel-metadata/
+
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# Node.js
+node_modules/
+
+# 测试 / 覆盖率
+.pytest_cache/
+.benchmarks/
+.coverage
+cov_report.txt
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+
+# 构建输出
+build/
+dist/
+*.exe
+
+# 日志
+*.log
+
+# 环境与密钥（勿提交）
+.env
+.env.*
+git_key.txt
+
+# 上传脚本临时文件
+.git-upload-msg.txt
+
+# 系统文件
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# 压缩包
+*.zip
+*.tar.gz
+*.spec
+debug.log
