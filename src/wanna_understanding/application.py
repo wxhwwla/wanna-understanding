@@ -91,7 +91,8 @@ class Application:
         if self.settings.auto_dark_theme:
             lines.append("深色主题：自动检测")
         if self.settings.monitor_mode == "custom":
-            lines.append(f"监控模式：自定义区域 ({self.settings.monitor_rect or '未配置'})")
+            rect_hint = self.settings.monitor_rect or "未配置"
+            lines.append(f"监控模式：自定义区域 ({rect_hint})")
         if self.settings.use_uia:
             lines.append("文本提取：UI Automation 优先")
         if not self.settings.has_api_key:

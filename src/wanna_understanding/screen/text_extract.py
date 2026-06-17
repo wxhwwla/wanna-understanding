@@ -62,8 +62,6 @@ class UIAutomationTextExtractor:
 
     @staticmethod
     def _read_document(window: object) -> str | None:
-        import uiautomation as auto
-
         doc = window.DocumentControl(searchDepth=15)  # type: ignore[attr-defined]
         if doc.Exists(0, 0):
             pattern = doc.GetTextPattern()
@@ -103,7 +101,8 @@ class OCRTextExtractor:
             is_dark_theme=is_dark_theme,
             profile=profile,
         )
-        return text if text.strip() else None
+        stripped = text.strip()
+        return stripped if stripped else None
 
 
 def extract_code_text(
@@ -118,7 +117,12 @@ def extract_code_text(
 ) -> str:
     """按策略链提取代码：UIA（可选）→ OCR。"""
     if use_uia and uia is not None:
-        uia_text = uia.extract_text(hwnd, image, profile=profile, is_dark_theme=is_dark_theme)
+        uia_text = uia.extract_text(
+            hwnd,
+            image,
+            profile=profile,
+            is_dark_theme=is_dark_theme,
+        )
         if uia_text:
             return uia_text
     return ocr.extract_text(

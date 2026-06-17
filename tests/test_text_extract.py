@@ -46,10 +46,9 @@ def test_extract_code_text_falls_back_to_ocr() -> None:
     assert text == "ocr text"
 
 
-def test_uia_extractor_returns_none_without_dependency(monkeypatch) -> None:
-    monkeypatch.setitem(__import__("sys").modules, "uiautomation", None)
+def test_uia_extractor_returns_none_without_hwnd() -> None:
     extractor = UIAutomationTextExtractor()
-    assert extractor.extract_text(1) is None
+    assert extractor.extract_text(0) is None
 
 
 def test_ocr_extractor_delegates_to_engine() -> None:

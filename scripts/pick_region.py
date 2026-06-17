@@ -7,7 +7,10 @@ from __future__ import annotations
 
 import tkinter as tk
 
-from wanna_understanding.screen.custom_region import format_monitor_rect, ScreenRect
+from wanna_understanding.screen.custom_region import (
+    ScreenRect,
+    format_monitor_rect,
+)
 
 
 def main() -> int:
@@ -91,7 +94,7 @@ def main() -> int:
 
     formatted = format_monitor_rect(result)
     print("框选完成，请将以下配置写入 .env 或环境变量：")
-    print(f"WU_MONITOR_MODE=custom")
+    print("WU_MONITOR_MODE=custom")
     print(f"WU_MONITOR_RECT={formatted}")
     return 0
 

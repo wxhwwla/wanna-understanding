@@ -2,7 +2,11 @@
 
 """屏幕捕获模块。"""
 
-from .capture_plan import build_monitor_region, crop_ratio_for_title, should_strip_line_numbers
+from .capture_plan import (
+    build_monitor_region,
+    crop_ratio_for_title,
+    should_strip_line_numbers,
+)
 from .capturer import ScreenCapturer
 from .custom_region import ScreenRect, format_monitor_rect, parse_monitor_rect
 from .monitor import get_work_area_for_rect

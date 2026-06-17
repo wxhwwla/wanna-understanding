@@ -44,6 +44,20 @@ python -m wanna_understanding --smoke
 
 默认 **流式输出** AI 回复；关闭：`$env:WU_STREAM_OUTPUT = "false"`。
 
+**自定义监控区域**（框选后写入 `.env`）：
+
+```powershell
+python scripts/pick_region.py
+# 输出 WU_MONITOR_MODE=custom 与 WU_MONITOR_RECT=left,top,width,height
+```
+
+**UI Automation**（可选，传统 Win32 编辑器效果更好）：
+
+```powershell
+pip install -e ".[uia]"
+$env:WU_USE_UIA = "true"
+```
+
 **打包**（需 `pip install -e ".[build,ocr]"`）：
 
 ```powershell
