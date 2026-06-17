@@ -33,9 +33,14 @@ $env:DEEPSEEK_API_KEY = "your-api-key-here"
 
 # 4. 启动（或双击 启动.bat）
 python -m wanna_understanding
+
+# 5. 无 GUI 冒烟（在活动编辑器窗口前运行）
+python -m wanna_understanding --smoke
 ```
 
 启动后程序会监控**当前活动窗口**，滚动停止约 0.5 秒后自动 OCR 识别代码并调用 AI 分析，结果展示在右侧悬浮窗。
+
+**快捷键**：`Ctrl+Shift+H` 显示/隐藏悬浮窗（双击标题栏亦可）。
 
 > **venv 损坏？** 双击 `修复venv.bat` 重建虚拟环境并重新安装依赖。
 

@@ -34,7 +34,10 @@ class Settings(BaseModel):
     debounce_delay: float = Field(default=0.5, ge=0.1, le=5.0)
     crop_ratio: float = Field(default=0.7, gt=0.0, le=1.0)
     cache_max_size: int = Field(default=100, ge=1, le=1000)
+    context_max_lines: int = Field(default=20, ge=5, le=200)
+    auto_dark_theme: bool = True
     dark_theme: bool = False
+    hotkey_toggle: bool = True
     overlay_width: int = Field(default=400, ge=200, le=1200)
     overlay_height: int = Field(default=300, ge=150, le=900)
     overlay_opacity: float = Field(default=0.85, gt=0.1, le=1.0)
@@ -68,7 +71,10 @@ class Settings(BaseModel):
             debounce_delay=float(os.getenv("WU_DEBOUNCE_DELAY", "0.5")),
             crop_ratio=float(os.getenv("WU_CROP_RATIO", "0.7")),
             cache_max_size=int(os.getenv("WU_CACHE_MAX_SIZE", "100")),
+            context_max_lines=int(os.getenv("WU_CONTEXT_MAX_LINES", "20")),
+            auto_dark_theme=cls._parse_bool(os.getenv("WU_AUTO_DARK_THEME", "true")),
             dark_theme=cls._parse_bool(os.getenv("WU_DARK_THEME", "false")),
+            hotkey_toggle=cls._parse_bool(os.getenv("WU_HOTKEY_TOGGLE", "true")),
             overlay_width=int(os.getenv("WU_OVERLAY_WIDTH", "400")),
             overlay_height=int(os.getenv("WU_OVERLAY_HEIGHT", "300")),
             overlay_opacity=float(os.getenv("WU_OVERLAY_OPACITY", "0.85")),

@@ -10,6 +10,8 @@ from tkinter import font as tkfont
 
 from wanna_understanding.ai.cache import AnalysisResult
 
+from .position import compute_overlay_position
+
 
 class OverlayWindow:
     """半透明置顶悬浮窗。"""
@@ -23,6 +25,7 @@ class OverlayWindow:
         self.width = width
         self.height = height
         self.opacity = opacity
+        self._visible = True
         self.root = tk.Tk()
         self.root.title("Wanna Understanding")
         self.root.overrideredirect(True)
@@ -33,7 +36,7 @@ class OverlayWindow:
 
         self._title = tk.Label(
             self.root,
-            text="Wanna Understanding",
+            text="Wanna Understanding  (Ctrl+Shift+H 显示/隐藏)",
             bg="#1e1e1e",
             fg="#cccccc",
             font=tkfont.Font(family="Segoe UI", size=10, weight="bold"),
@@ -44,6 +47,7 @@ class OverlayWindow:
         self._title.pack(fill="x")
         self._title.bind("<Button-1>", self._start_drag)
         self._title.bind("<B1-Motion>", self._on_drag)
+        self._title.bind("<Double-Button-1>", lambda _e: self.toggle_visibility())
 
         self.text = tk.Text(
             self.root,
@@ -62,6 +66,11 @@ class OverlayWindow:
         self.text.insert("end", "正在等待代码变化…")
         self.text.configure(state="disabled")
 
+    @property
+    def is_visible(self) -> bool:
+        """悬浮窗是否处于显示状态。"""
+        return self._visible
+
     def _start_drag(self, event: tk.Event) -> None:
         self._drag_offset = (
             event.x_root - self.root.winfo_x(),
@@ -73,17 +82,45 @@ class OverlayWindow:
         y = event.y_root - self._drag_offset[1]
         self.root.geometry(f"{self.width}x{self.height}+{x}+{y}")
 
+    def _screen_size(self) -> tuple[int, int]:
+        return (
+            int(self.root.winfo_screenwidth()),
+            int(self.root.winfo_screenheight()),
+        )
+
     def show_near(self, window_rect: tuple[int, int, int, int]) -> None:
-        """在目标窗口右侧定位悬浮窗。"""
-        _left, top, right, _bottom = window_rect
-        x = right + 10
-        y = top
+        """在目标窗口旁定位悬浮窗，空间不足时自动翻到左侧。"""
+        screen_w, screen_h = self._screen_size()
+        x, y = compute_overlay_position(
+            window_rect,
+            self.width,
+            self.height,
+            screen_w,
+            screen_h,
+        )
         self.root.geometry(f"{self.width}x{self.height}+{x}+{y}")
-        self.root.deiconify()
+        if self._visible:
+            self.root.deiconify()
+
+    def toggle_visibility(self) -> bool:
+        """切换显示/隐藏，返回切换后是否可见。"""
+        if self._visible:
+            self.root.withdraw()
+            self._visible = False
+        else:
+            self.root.deiconify()
+            self._visible = True
+        return self._visible
 
     def hide(self) -> None:
         """隐藏悬浮窗。"""
         self.root.withdraw()
+        self._visible = False
+
+    def show(self) -> None:
+        """显示悬浮窗。"""
+        self.root.deiconify()
+        self._visible = True
 
     def update_content(self, result: AnalysisResult) -> None:
         """更新展示内容。"""

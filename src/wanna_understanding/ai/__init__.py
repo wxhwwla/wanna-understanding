@@ -4,6 +4,7 @@
 
 from .cache import AnalysisResult, ResultCache
 from .client import AIClient
+from .context import trim_to_context
 from .prompt import SYSTEM_PROMPT, build_user_prompt
 
 __all__ = [
@@ -12,4 +13,5 @@ __all__ = [
     "AnalysisResult",
     "ResultCache",
     "build_user_prompt",
+    "trim_to_context",
 ]

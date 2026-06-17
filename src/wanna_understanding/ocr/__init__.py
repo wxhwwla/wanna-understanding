@@ -5,6 +5,7 @@
 from .engine import OCREngine
 from .preprocess import ImagePreprocessor
 from .recognizer import OCRRecognizer, OCRResult, OCRText
+from .theme import detect_dark_theme
 
 __all__ = [
     "ImagePreprocessor",
@@ -12,4 +13,5 @@ __all__ = [
     "OCRRecognizer",
     "OCRResult",
     "OCRText",
+    "detect_dark_theme",
 ]
