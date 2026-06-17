@@ -10,7 +10,8 @@
 | 组件 | MVP 技术选型 | 未来可选 |
 |------|-------------|----------|
 | 屏幕捕获 | mss + win32gui | Rust 原生截图 |
-| OCR 识别 | PaddleOCR | Windows.Media.Ocr (C#) |
+| OCR 识别 | EasyOCR | Windows.Media.Ocr (C#) |
+| 系统托盘 | pystray | 原生 Shell 图标 |
 | AI 分析 | DeepSeek API (OpenAI 兼容) | 替换为本地模型 |
 | 悬浮窗 | tkinter | WPF / Webview2 |
 | 事件监听 | polling 轮询 | pynput / Windows 钩子 |
@@ -40,9 +41,9 @@
 ├─────────────────────────────────────────────────────────┤
 │              Text Extraction Layer                      │
 │  ┌──────────────────────────────────────────────────┐   │
-│  │  OCR Engine (PaddleOCR)                         │   │
+│  │  OCR Engine (EasyOCR) + 可选 UIA (TextExtractor) │   │
 │  │  · 图像预处理：灰度/放大/二值化/反色            │   │
-│  │  · 代码区域裁剪（中间 70%）                      │   │
+│  │  · 编辑器配置 profiles + 行号裁剪               │   │
 │  │  · 后处理：缩进修复、特殊符号校正                │   │
 │  └──────────────────────────────────────────────────┘   │
 ├─────────────────────────────────────────────────────────┤
@@ -81,7 +82,9 @@ src/wanna_understanding/
 
 ├── ocr/                     # 文字识别模块
 │   ├── __init__.py
-│   ├── engine.py            # PaddleOCR 封装（初始化/调用/释放）
+│   ├── engine.py            # EasyOCR 封装（初始化/调用/释放）
+│   ├── recognizer.py        # 识别器（源自 endfield 项目）
+│   ├── profiles.py          # 编辑器 OCR 配置
 │   └── preprocess.py        # 图像预处理管线
 
 ├── trigger/                 # 触发控制模块
@@ -93,11 +96,14 @@ src/wanna_understanding/
 │   ├── __init__.py
 │   ├── client.py            # DeepSeek API 客户端（支持流式）
 │   ├── prompt.py            # Prompt 模板 + 结构化输出解析
-│   └── cache.py             # LRU 结果缓存（基于代码 SHA256）
+│   ├── cache.py             # LRU 结果缓存（基于代码 SHA256）
+│   └── history.py           # 分析历史持久化
 
 └── ui/                      # 展示模块
-    ├── __init__.py
-    └── overlay.py           # tkinter 无边框悬浮窗
+    ├── overlay.py           # tkinter 无边框悬浮窗
+    ├── tray.py              # 系统托盘
+    ├── history_dialog.py    # 历史浏览
+    └── settings_dialog.py   # 设置 GUI
 ```
 
 ---
@@ -120,7 +126,7 @@ src/wanna_understanding/
 [Preprocess] ── 灰度 → 二值化 → 反色（深色模式）
      │
      ▼
-[OCR Engine] ── PaddleOCR 识别 → 提取文本行
+[OCR / UIA] ── 提取代码文本
      │
      ▼
 [Cache Lookup] ── SHA256(代码) → 命中？→ 直接返回
@@ -139,7 +145,7 @@ src/wanna_understanding/
 | ADR | 主题 | 状态 |
 |-----|------|:----:|
 | [ADR-0001](docs/adr/0001-mvp-scope-and-tech-stack.md) | MVP 范围与技术选型 | ✅ 已接受 |
-| [ADR-0002](docs/adr/0002-ocr-vs-uia.md) | OCR vs UI Automation 路线选择 | 📝 草案 |
+| [ADR-0002](docs/adr/0002-ocr-vs-uia.md) | OCR vs UI Automation 路线选择 | ✅ 已接受 |
 | — | 更多待补充 | — |
 
 ---
@@ -157,6 +163,8 @@ src/wanna_understanding/
 | `AIClient` | `ai.client` | API 客户端：流式调用、重试、超时 |
 | `PromptTemplate` | `ai.prompt` | Prompt 工程：系统/用户消息模板 + 输出解析 |
 | `ResultCache` | `ai.cache` | LRU 缓存：基于代码 SHA256 键 |
+| `HistoryStore` | `ai.history` | 分析历史 JSON 持久化 |
+| `TrayController` | `ui.tray` | 系统托盘图标与菜单 |
 | `OverlayWindow` | `ui.overlay` | 悬浮窗控件：tkinter 顶层窗口 |
 
 ---

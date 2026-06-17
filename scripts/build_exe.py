@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 
-def build(*, clean: bool = False) -> int:
+def build(*, clean: bool = False, console: bool = False) -> int:
     """使用 PyInstaller 构建 onedir 发行包。"""
     root = Path(__file__).resolve().parent.parent
     entry = root / "src" / "wanna_understanding" / "__main__.py"
@@ -24,7 +24,6 @@ def build(*, clean: bool = False) -> int:
         "WannaUnderstanding",
         "--onedir",
         "--noconfirm",
-        "--console",
         "--paths",
         str(root / "src"),
         "--hidden-import",
@@ -41,6 +40,10 @@ def build(*, clean: bool = False) -> int:
         str(build_dir),
         str(entry),
     ]
+    if console:
+        cmd.append("--console")
+    else:
+        cmd.append("--noconsole")
     if clean:
         cmd.insert(3, "--clean")
     print("[build]", " ".join(cmd))
@@ -53,9 +56,14 @@ def build(*, clean: bool = False) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="打包 Wanna Understanding")
     parser.add_argument("--clean", action="store_true", help="清理后再构建")
+    parser.add_argument(
+        "--console",
+        action="store_true",
+        help="保留控制台窗口（调试用，默认无控制台）",
+    )
     args = parser.parse_args(argv)
     try:
-        return build(clean=args.clean)
+        return build(clean=args.clean, console=args.console)
     except subprocess.CalledProcessError as exc:
         print(f"[error] PyInstaller 失败，退出码 {exc.returncode}")
         return exc.returncode or 1

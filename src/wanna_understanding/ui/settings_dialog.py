@@ -95,7 +95,7 @@ class SettingsDialog:
 
         hint = tk.Label(
             form,
-            text="保存后写入 .env；轮询间隔需重启生效。",
+            text="保存后写入 .env；轮询间隔、托盘开关需重启生效。",
             bg="#1e1e1e",
             fg="#888888",
             anchor="w",

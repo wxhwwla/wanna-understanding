@@ -12,7 +12,10 @@
 | Python | PSF License | https://www.python.org/psf-license/ |
 | mss | MIT | 屏幕截图 |
 | pywin32 | BSD-3-Clause | Windows API（窗口/DPI） |
-| PaddleOCR | Apache 2.0 | OCR 文字识别 |
+| Pillow | PIL License | 图像预处理 |
+| EasyOCR | Apache 2.0 | OCR 文字识别（可选组 `[ocr]`） |
+| pystray | MIT | 系统托盘 |
+| uiautomation | Apache 2.0 | UI Automation（可选组 `[uia]`） |
 | httpx | BSD-3-Clause | HTTP 客户端（AI API） |
 | pydantic | MIT | 数据模型 |
 | pytest / pytest-cov | MIT | 仅开发/测试使用 |

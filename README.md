@@ -31,14 +31,18 @@ python scripts/ocr_download_models.py
 # 3. 配置 DeepSeek API Key
 $env:DEEPSEEK_API_KEY = "your-api-key-here"
 
-# 4. 启动（或双击 启动.bat）
-python -m wanna_understanding
+# 4. 启动
+# 推荐：双击 启动.bat（pythonw，无控制台，托盘常驻）
+python -m wanna_understanding          # 命令行模式（关控制台即退出）
+python -m wanna_understanding --no-tray  # 禁用托盘
 
 # 5. 无 GUI 冒烟（在活动编辑器窗口前运行）
 python -m wanna_understanding --smoke
 ```
 
-启动后程序会监控**当前活动窗口**，滚动停止约 0.5 秒后自动 OCR 识别代码并调用 AI 分析，结果展示在右侧悬浮窗。关闭控制台窗口不会退出程序——请用**托盘右键 → 退出**，或任务管理器结束进程。
+启动后程序在**系统托盘**常驻（默认启用）。双击 `启动.bat` 使用 `pythonw`，无控制台窗口；退出请用**托盘右键 → 退出**。
+
+命令行 `python -m wanna_understanding` 会保留控制台，关闭控制台将结束进程。
 
 **快捷键**：`Ctrl+Shift+H` 显示/隐藏 | `J` 历史 | `S` 设置（均需按住 Ctrl+Shift）
 
@@ -64,6 +68,7 @@ $env:WU_USE_UIA = "true"
 
 ```powershell
 python scripts/build_exe.py
+# 默认无控制台；调试：python scripts/build_exe.py --console
 # 输出 dist/WannaUnderstanding/WannaUnderstanding.exe
 ```
 
@@ -71,77 +76,23 @@ python scripts/build_exe.py
 
 ---
 
-## 📦 目录结构
+## 📦 目录结构（摘要）
 
 ```
-wanna-understanding/
-├── src/
-│   └── wanna_understanding/
-│       ├── __init__.py
-│       ├── __main__.py          # 入口点
-│       ├── screen/              # 屏幕捕获模块
-│       │   ├── __init__.py
-│       │   ├── capturer.py      # 截图引擎（mss / win32gui）
-│       │   └── region.py        # 区域定义与 DPI 适配
-│       ├── ocr/                 # 文字识别模块
-│       │   ├── __init__.py
-│       │   ├── engine.py        # EasyOCR 封装
-│       │   ├── recognizer.py    # EasyOCR 识别器（源自 endfield 项目）
-│       │   └── preprocess.py    # 图像预处理（二值化/放大/反色）
-│       ├── trigger/             # 触发控制模块
-│       │   ├── __init__.py
-│       │   ├── watcher.py       # 窗口变化轮询 / 事件监听
-│       │   └── debounce.py      # 防抖调度器
-│       ├── ai/                  # AI 分析模块
-│       │   ├── __init__.py
-│       │   ├── client.py        # DeepSeek API 客户端
-│       │   ├── prompt.py        # Prompt 模板工程
-│       │   └── cache.py         # 结果缓存（基于代码哈希）
-│       ├── ui/                  # 展示模块
-│       │   ├── __init__.py
-│       │   ├── overlay.py       # 无边框置顶悬浮窗
-│       │   └── theme.py         # 半透明/穿透/快捷键
-│       └── config.py            # 全局配置
-├── tests/
-│   ├── __init__.py
-│   ├── conftest.py
-│   ├── test_import.py
-│   ├── test_region.py
-│   ├── test_debounce.py
-│   ├── test_watcher.py
-│   ├── test_preprocess.py
-│   ├── test_ocr_engine.py
-│   ├── test_cache.py
-│   ├── test_ai_client.py
-│   ├── test_prompt.py
-│   └── test_config.py
-├── scripts/
-│   ├── __init__.py
-│   └── main.py                  # 开发入口
-├── docs/
-│   ├── adr/                     # 架构决策记录
-│   ├── plans/                   # 计划文件
-│   ├── 项目目标.md
-│   ├── 技术方案.md              # 本文档
-│   ├── 代码结构规范.md
-│   ├── 文档规范.md
-│   ├── 操作指令集.md
-│   ├── 会话接续手册.md
-│   └── 错误集.md
-├── resources/
-│   └── README.md
-├── .claude/                     # Claude Code 配置
-├── .github/workflows/           # CI
-├── .gitignore
-├── .pre-commit-config.yaml
-├── pyproject.toml
-├── LICENSE
-├── README.md                    # 本文件
-├── ARCHITECTURE.md
-├── CONTEXT.md
-├── CONTRIBUTING.md
-└── CLAUDE.md
+src/wanna_understanding/
+├── application.py       # 主编排
+├── config.py            # 配置与 .env 读写
+├── screen/              # 截图、区域、UIA 文本提取
+├── ocr/                 # EasyOCR、预处理、编辑器配置
+├── trigger/             # 轮询、防抖
+├── ai/                  # DeepSeek 客户端、缓存、历史
+└── ui/                  # 悬浮窗、托盘、设置/历史对话框
+scripts/                 # 打包、OCR 模型下载、区域框选
+tests/                   # pytest 单元测试
+docs/                    # 设计与接续文档
 ```
+
+完整说明见 [`ARCHITECTURE.md`](ARCHITECTURE.md)。
 
 ---
 
@@ -155,6 +106,8 @@ wanna-understanding/
 | **AI 分析** | 调用大模型 API，解释代码功能 + 指出潜在 Bug |
 | **悬浮窗展示** | 无边框、半透明、置顶，可拖拽/隐藏，不干扰操作 |
 | **结果缓存** | 基于代码哈希缓存分析结果，降低 token 消耗 |
+| **分析历史** | 持久化到 `%APPDATA%/WannaUnderstanding/`，可浏览回看 |
+| **系统托盘** | 后台常驻，右键菜单控制显示/设置/退出 |
 
 ---
 
@@ -164,7 +117,7 @@ wanna-understanding/
 ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
 │  Screen  │───▶│   OCR    │───▶│   AI     │───▶│   UI     │
 │ Capturer │    │ Engine   │    │  Client  │    │  Overlay │
-│  (mss)   │    │(PaddleO) │    │(DeepSeek)│    │(tkinter) │
+│  (mss)   │    │(EasyOCR) │    │(DeepSeek)│    │(tkinter) │
 └──────────┘    └──────────┘    └──────────┘    └──────────┘
       │                                              ▲
       ▼                                              │
@@ -188,12 +141,13 @@ pytest --cov=wanna_understanding # 覆盖率
 
 ## 🛣 路线图
 
-| 阶段 | 内容 | 时间 |
+| 阶段 | 内容 | 状态 |
 |------|------|:----:|
-| **MVP** | Python + PaddleOCR + DeepSeek + tkinter 悬浮窗 — 截图→OCR→AI→展示闭环 | 第 1-2 周 |
-| **优化** | 防抖、缓存、局部发送、窗口自动跟随 | 第 3-4 周 |
-| **扩展** | 适配多种 IDE、UI Automation 文本获取替代 OCR | 第 5-8 周 |
-| **进阶** | C# / Rust 重写核心，追求更低 CPU 占用 | 长远 |
+| **MVP** | EasyOCR + DeepSeek + tkinter 悬浮窗闭环 | ✅ |
+| **优化** | 防抖、缓存、流式、局部发送、快捷键 | ✅ |
+| **扩展** | 多 IDE、UIA、自定义区域、历史/设置/托盘 | ✅ |
+| **验收** | GUI 实机端到端验证 | 🟡 |
+| **进阶** | C# / Rust 重写核心 | ⬜ |
 
 ---
 

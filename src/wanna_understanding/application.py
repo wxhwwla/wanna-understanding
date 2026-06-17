@@ -214,7 +214,9 @@ class Application:
         self.ai = AIClient(self.settings)
         self.watcher.debounce_delay = new_settings.debounce_delay
         self.history.set_max_entries(new_settings.history_max_entries)
-        self.overlay.show_status("设置已更新（轮询间隔需重启后生效）")
+        self.overlay.show_status(
+            "设置已更新。轮询间隔与托盘开关需重启后生效。"
+        )
 
     def _build_capture_region(self, hwnd: int, title: str) -> WindowRegion:
         return build_monitor_region(
