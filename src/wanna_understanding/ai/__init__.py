@@ -2,4 +2,14 @@
 
 """AI 分析模块。"""
 
-__all__: list[str] = []
+from .cache import AnalysisResult, ResultCache
+from .client import AIClient
+from .prompt import SYSTEM_PROMPT, build_user_prompt
+
+__all__ = [
+    "SYSTEM_PROMPT",
+    "AIClient",
+    "AnalysisResult",
+    "ResultCache",
+    "build_user_prompt",
+]

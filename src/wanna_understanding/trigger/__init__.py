@@ -2,4 +2,10 @@
 
 """触发控制模块。"""
 
-__all__: list[str] = []
+from .debounce import DebounceScheduler
+from .watcher import ContentWatcher
+
+__all__ = [
+    "ContentWatcher",
+    "DebounceScheduler",
+]

@@ -16,9 +16,28 @@ Wanna Understanding 是一个始终在后台运行的桌面程序，像一个沉
 
 ## 🚀 快速开始
 
-```bash
-# TODO: MVP 完成后补充
+```powershell
+# 1. 创建并激活虚拟环境
+$env:PYTHONUTF8 = "1"
+python -m venv .venv
+.venv\Scripts\activate
+
+# 2. 安装依赖（含 EasyOCR）
+pip install -e ".[dev,ocr]"
+
+# 2b. 预下载 OCR 模型（首次运行前推荐）
+python scripts/ocr_download_models.py
+
+# 3. 配置 DeepSeek API Key
+$env:DEEPSEEK_API_KEY = "your-api-key-here"
+
+# 4. 启动（或双击 启动.bat）
+python -m wanna_understanding
 ```
+
+启动后程序会监控**当前活动窗口**，滚动停止约 0.5 秒后自动 OCR 识别代码并调用 AI 分析，结果展示在右侧悬浮窗。
+
+> **venv 损坏？** 双击 `修复venv.bat` 重建虚拟环境并重新安装依赖。
 
 ---
 
@@ -36,7 +55,8 @@ wanna-understanding/
 │       │   └── region.py        # 区域定义与 DPI 适配
 │       ├── ocr/                 # 文字识别模块
 │       │   ├── __init__.py
-│       │   ├── engine.py        # PaddleOCR 封装
+│       │   ├── engine.py        # EasyOCR 封装
+│       │   ├── recognizer.py    # EasyOCR 识别器（源自 endfield 项目）
 │       │   └── preprocess.py    # 图像预处理（二值化/放大/反色）
 │       ├── trigger/             # 触发控制模块
 │       │   ├── __init__.py
@@ -55,7 +75,16 @@ wanna-understanding/
 ├── tests/
 │   ├── __init__.py
 │   ├── conftest.py
-│   └── test_import.py           # 包导入冒烟测试（模块测试随 MVP 编码补充）
+│   ├── test_import.py
+│   ├── test_region.py
+│   ├── test_debounce.py
+│   ├── test_watcher.py
+│   ├── test_preprocess.py
+│   ├── test_ocr_engine.py
+│   ├── test_cache.py
+│   ├── test_ai_client.py
+│   ├── test_prompt.py
+│   └── test_config.py
 ├── scripts/
 │   ├── __init__.py
 │   └── main.py                  # 开发入口
