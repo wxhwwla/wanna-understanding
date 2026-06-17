@@ -159,4 +159,6 @@ pytest --cov=wanna_understanding # 覆盖率
 
 ## 📄 许可证
 
-AGPL-3.0（默认）或书面商业许可。详见 [LICENSE](LICENSE)。
+**本项目**采用 **AGPL-3.0**（默认）或版权人书面**商业许可**；详见 [`LICENSE`](LICENSE) 与 [`docs/数据来源与许可.md`](docs/数据来源与许可.md)。
+
+[`NOTICES.md`](NOTICES.md) 中列出的 MIT 等字样指**第三方依赖库**的许可证，不是本项目许可证。
