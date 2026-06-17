@@ -3,7 +3,7 @@ chcp 65001 >nul
 title Wanna Understanding - AI 代码审阅员
 
 echo ============================================
-echo   Wanna Understanding v0.1.0
+echo   Wanna Understanding
 echo   AI 代码审阅员 - 只读不写，零操作，实时分析
 echo ============================================
 echo.

@@ -54,11 +54,8 @@ wanna-understanding/
 │       └── config.py            # 全局配置
 ├── tests/
 │   ├── __init__.py
-│   ├── test_capturer.py
-│   ├── test_ocr.py
-│   ├── test_trigger.py
-│   ├── test_ai.py
-│   └── test_overlay.py
+│   ├── conftest.py
+│   └── test_import.py           # 包导入冒烟测试（模块测试随 MVP 编码补充）
 ├── scripts/
 │   ├── __init__.py
 │   └── main.py                  # 开发入口

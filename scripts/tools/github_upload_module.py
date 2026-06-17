@@ -649,7 +649,8 @@ def signing_status_message(cfg: SigningConfig) -> str:
     if is_signing_configured(cfg):
         fmt = (cfg.gpg_format or "openpgp").strip().lower()
         return (
-            f"[info] commit signing configured ({fmt}), commits and tags will be signed, "
+            f"[info] commit signing configured ({fmt}), "
+            "commits and tags will be signed, "
             "GitHub can show Verified\n"
             "(key must be added to GitHub SSH and GPG keys Settings)"
         )
@@ -860,7 +861,8 @@ def _sync_saved_version_with_head(readme_path: Path, meta) -> str:
     head_version = _read_version_from_git_head(readme_path)
     if head_version and saved_version != head_version:
         print(
-            f"[info] correcting _VERSION: worktree {saved_version} -> HEAD {head_version}"
+            f"[info] correcting _VERSION: worktree {saved_version} "
+            f"-> HEAD {head_version}"
             " (leftover from failed upload)"
         )
         meta.write_version(readme_path, head_version)
@@ -1061,7 +1063,11 @@ def commit_and_push(
     """Execute git commit and push flow with version management.
 
     Args:
-        dry_run: preview mode, show plan without modifying or pushing.
+        minor: 次版本递增（第二位 +1，第三位置零）。
+        no_bump: 本次上传不递增版本号。
+        push_tag: 推送与版本对应的 git tag。
+        skip_git_backup: 跳过上传前的 .git 目录备份。
+        dry_run: 预览模式，展示计划但不修改或推送。
     """
     os.chdir(_repo_root())
 
@@ -1253,7 +1259,8 @@ def commit_and_push(
                 )
             elif push_tag:
                 print(
-                    "[info] --tag skipped: only minor uploads get tags, use --minor or input M"
+                    "[info] --tag skipped: only minor uploads get tags, "
+                    "use --minor or input M"
                 )
         except subprocess.CalledProcessError:
             print(

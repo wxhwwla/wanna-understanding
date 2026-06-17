@@ -4,11 +4,12 @@
 
 
 def test_import() -> None:
-    """验证 wanna_understanding 包可导入且版本号正确。"""
+    """验证 wanna_understanding 包可导入且版本号与 _version 一致。"""
+    from scripts._version import get_version
     from wanna_understanding import __version__
 
     assert isinstance(__version__, str)
-    assert __version__ == "0.1.0"
+    assert __version__ == get_version()
 
 
 def test_import_main() -> None:
