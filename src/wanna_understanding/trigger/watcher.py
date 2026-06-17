@@ -37,3 +37,12 @@ class ContentWatcher:
         """重置监控状态。"""
         self._last_hwnd = None
         self._debounce.reset()
+
+    @property
+    def debounce_delay(self) -> float:
+        """当前防抖延迟（秒）。"""
+        return self._debounce.delay
+
+    @debounce_delay.setter
+    def debounce_delay(self, value: float) -> None:
+        self._debounce.delay = value

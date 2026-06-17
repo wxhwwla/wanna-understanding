@@ -7,8 +7,8 @@ from __future__ import annotations
 import sys
 
 
-def hotkey_toggle_pressed() -> bool:
-    """检测 Ctrl+Shift+H 是否被按下（边沿触发由调用方处理）。"""
+def _ctrl_shift_key_pressed(vk_code: int) -> bool:
+    """检测 Ctrl+Shift+指定虚拟键是否按下。"""
     if sys.platform != "win32":
         return False
     import ctypes
@@ -16,5 +16,20 @@ def hotkey_toggle_pressed() -> bool:
     user32 = ctypes.windll.user32
     ctrl = user32.GetAsyncKeyState(0x11) & 0x8000
     shift = user32.GetAsyncKeyState(0x10) & 0x8000
-    key = user32.GetAsyncKeyState(0x48) & 0x8000  # H
+    key = user32.GetAsyncKeyState(vk_code) & 0x8000
     return bool(ctrl and shift and key)
+
+
+def hotkey_toggle_pressed() -> bool:
+    """Ctrl+Shift+H — 显示/隐藏悬浮窗。"""
+    return _ctrl_shift_key_pressed(0x48)
+
+
+def hotkey_history_pressed() -> bool:
+    """Ctrl+Shift+J — 打开分析历史。"""
+    return _ctrl_shift_key_pressed(0x4A)
+
+
+def hotkey_settings_pressed() -> bool:
+    """Ctrl+Shift+S — 打开设置。"""
+    return _ctrl_shift_key_pressed(0x53)

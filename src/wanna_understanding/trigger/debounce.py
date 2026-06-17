@@ -21,6 +21,10 @@ class DebounceScheduler:
     def delay(self) -> float:
         return self._delay
 
+    @delay.setter
+    def delay(self, value: float) -> None:
+        self._delay = max(0.1, value)
+
     def observe(self, value: str) -> str | None:
         """记录新观测值；若已稳定且与上次触发不同则返回该值。"""
         now = time.monotonic()

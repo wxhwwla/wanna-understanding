@@ -14,7 +14,8 @@ from PIL import Image
 from wanna_understanding.ai.cache import AnalysisResult, ResultCache
 from wanna_understanding.ai.client import AIClient
 from wanna_understanding.ai.context import trim_to_context
-from wanna_understanding.config import Settings, load_settings
+from wanna_understanding.ai.history import HistoryStore
+from wanna_understanding.config import Settings, get_data_dir, load_settings
 from wanna_understanding.ocr.engine import OCREngine
 from wanna_understanding.ocr.profiles import detect_editor_profile
 from wanna_understanding.ocr.theme import detect_dark_theme
@@ -31,8 +32,14 @@ from wanna_understanding.screen.window import (
     is_window_visible,
 )
 from wanna_understanding.trigger.watcher import ContentWatcher
-from wanna_understanding.ui.hotkey import hotkey_toggle_pressed
+from wanna_understanding.ui.history_dialog import HistoryDialog
+from wanna_understanding.ui.hotkey import (
+    hotkey_history_pressed,
+    hotkey_settings_pressed,
+    hotkey_toggle_pressed,
+)
 from wanna_understanding.ui.overlay import OverlayWindow
+from wanna_understanding.ui.settings_dialog import SettingsDialog
 from wanna_understanding.ui.streaming import StreamUpdateThrottler
 
 
@@ -48,6 +55,10 @@ class Application:
         self.ocr = OCREngine()
         self.ai = AIClient(self.settings)
         self.cache = ResultCache(max_size=self.settings.cache_max_size)
+        self.history = HistoryStore(
+            path=get_data_dir() / "history.json",
+            max_entries=self.settings.history_max_entries,
+        )
         self.overlay = OverlayWindow(
             width=self.settings.overlay_width,
             height=self.settings.overlay_height,
@@ -60,6 +71,8 @@ class Application:
         self._uia_extractor = UIAutomationTextExtractor()
         self._analyzing = False
         self._hotkey_was_down = False
+        self._history_hotkey_was_down = False
+        self._settings_hotkey_was_down = False
         self.watcher = ContentWatcher(
             hash_provider=self._capture_hash,
             debounce_delay=self.settings.debounce_delay,
@@ -82,7 +95,7 @@ class Application:
             f"轮询间隔：{self.settings.poll_interval}s",
             f"防抖延迟：{self.settings.debounce_delay}s",
             f"局部发送：最多 {self.settings.context_max_lines} 行",
-            "快捷键：Ctrl+Shift+H 显示/隐藏",
+            "快捷键：Ctrl+Shift+H 显示/隐藏 | J 历史 | S 设置",
         ]
         if self.settings.stream_output:
             lines.append("AI 输出：流式")
@@ -126,14 +139,45 @@ class Application:
             self.overlay.show_status(f"监控异常：{exc}")
 
     def _handle_hotkey(self) -> None:
-        if not self.settings.hotkey_toggle:
-            return
-        pressed = hotkey_toggle_pressed()
-        if pressed and not self._hotkey_was_down:
-            visible = self.overlay.toggle_visibility()
-            if not visible:
-                self.overlay.show_status("悬浮窗已隐藏（Ctrl+Shift+H 恢复）")
-        self._hotkey_was_down = pressed
+        if self.settings.hotkey_toggle:
+            pressed = hotkey_toggle_pressed()
+            if pressed and not self._hotkey_was_down:
+                visible = self.overlay.toggle_visibility()
+                if not visible:
+                    self.overlay.show_status("悬浮窗已隐藏（Ctrl+Shift+H 恢复）")
+            self._hotkey_was_down = pressed
+
+        history_pressed = hotkey_history_pressed()
+        if history_pressed and not self._history_hotkey_was_down:
+            self._open_history_dialog()
+        self._history_hotkey_was_down = history_pressed
+
+        settings_pressed = hotkey_settings_pressed()
+        if settings_pressed and not self._settings_hotkey_was_down:
+            self._open_settings_dialog()
+        self._settings_hotkey_was_down = settings_pressed
+
+    def _open_history_dialog(self) -> None:
+        HistoryDialog(
+            self.overlay.root,
+            self.history,
+            on_select=lambda entry: self.overlay.update_content(entry.result),
+        )
+
+    def _open_settings_dialog(self) -> None:
+        SettingsDialog(
+            self.overlay.root,
+            self.settings,
+            on_saved=self._apply_settings,
+        )
+
+    def _apply_settings(self, new_settings: Settings) -> None:
+        self.settings = new_settings
+        self.ai.close()
+        self.ai = AIClient(self.settings)
+        self.watcher.debounce_delay = new_settings.debounce_delay
+        self.history.set_max_entries(new_settings.history_max_entries)
+        self.overlay.show_status("设置已更新（轮询间隔需重启后生效）")
 
     def _build_capture_region(self, hwnd: int, title: str) -> WindowRegion:
         return build_monitor_region(
@@ -205,6 +249,7 @@ class Application:
                     return
                 result = self._run_ai_analysis(trimmed, code_hash)
                 self.cache.put(code_hash, result)
+                self._record_history(trimmed, result)
                 self._schedule_result(result)
             except Exception as exc:
                 detail = traceback.format_exc(limit=2)
@@ -244,6 +289,15 @@ class Application:
 
     def _schedule_result(self, result: AnalysisResult) -> None:
         self.overlay.schedule(lambda: self.overlay.update_content(result))
+
+    def _record_history(self, code: str, result: AnalysisResult) -> None:
+        if not self.settings.history_enabled:
+            return
+        self.history.append(
+            window_title=self._latest_title,
+            code=code,
+            result=result,
+        )
 
 
 def run_smoke_test(settings: Settings | None = None) -> int:

@@ -2,7 +2,11 @@
 
 """配置加载测试。"""
 
-from wanna_understanding.config import Settings, load_settings
+from wanna_understanding.config import (
+    Settings,
+    load_settings,
+    save_settings_to_dotenv,
+)
 
 
 def test_settings_reads_env(monkeypatch) -> None:
@@ -28,3 +32,34 @@ def test_monitor_env_vars(monkeypatch) -> None:
     assert settings.monitor_mode == "custom"
     assert settings.monitor_rect == "10,20,300,400"
     assert settings.use_uia is True
+
+
+def test_save_settings_to_dotenv_roundtrip(tmp_path, monkeypatch) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "DEEPSEEK_API_KEY=old\n# comment\nWU_POLL_INTERVAL=9\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    settings = Settings(
+        deepseek_api_key="new-key",
+        poll_interval=2.5,
+        debounce_delay=0.6,
+        context_max_lines=30,
+        stream_output=False,
+        editor_profile="pycharm_dark",
+        monitor_mode="custom",
+        monitor_rect="1,2,3,4",
+        use_uia=True,
+        history_enabled=False,
+        history_max_entries=25,
+    )
+    save_settings_to_dotenv(settings)
+    text = env_file.read_text(encoding="utf-8")
+    assert "DEEPSEEK_API_KEY=new-key" in text
+    assert "WU_POLL_INTERVAL=2.5" in text
+    assert "# comment" in text
+    reloaded = Settings.from_env()
+    assert reloaded.deepseek_api_key == "new-key"
+    assert reloaded.poll_interval == 2.5
+    assert reloaded.history_enabled is False

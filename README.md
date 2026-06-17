@@ -40,7 +40,7 @@ python -m wanna_understanding --smoke
 
 启动后程序会监控**当前活动窗口**，滚动停止约 0.5 秒后自动 OCR 识别代码并调用 AI 分析，结果展示在右侧悬浮窗。
 
-**快捷键**：`Ctrl+Shift+H` 显示/隐藏悬浮窗（双击标题栏亦可）。
+**快捷键**：`Ctrl+Shift+H` 显示/隐藏 | `J` 历史 | `S` 设置（均需按住 Ctrl+Shift）
 
 默认 **流式输出** AI 回复；关闭：`$env:WU_STREAM_OUTPUT = "false"`。
 

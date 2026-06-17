@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 from pydantic import BaseModel, Field, field_validator
@@ -22,6 +23,71 @@ def _load_dotenv(path: Path = Path(".env")) -> None:
         key = key.strip()
         value = value.strip().strip('"').strip("'")
         os.environ.setdefault(key, value)
+
+
+def dotenv_path() -> Path:
+    """默认 `.env` 路径（当前工作目录）。"""
+    return Path(".env")
+
+
+def get_data_dir() -> Path:
+    """用户数据目录（历史记录等）。"""
+    if sys.platform == "win32":
+        base = Path(os.environ.get("APPDATA", Path.home()))
+    else:
+        base = Path.home() / ".local" / "share"
+    path = base / "WannaUnderstanding"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _format_env_value(value: object) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
+
+
+def _settings_env_map(settings: Settings) -> dict[str, str]:
+    """将 Settings 映射为环境变量键值。"""
+    return {
+        "DEEPSEEK_API_KEY": settings.deepseek_api_key,
+        "WU_POLL_INTERVAL": _format_env_value(settings.poll_interval),
+        "WU_DEBOUNCE_DELAY": _format_env_value(settings.debounce_delay),
+        "WU_CONTEXT_MAX_LINES": _format_env_value(settings.context_max_lines),
+        "WU_STREAM_OUTPUT": _format_env_value(settings.stream_output),
+        "WU_EDITOR_PROFILE": settings.editor_profile,
+        "WU_MONITOR_MODE": settings.monitor_mode,
+        "WU_MONITOR_RECT": settings.monitor_rect,
+        "WU_USE_UIA": _format_env_value(settings.use_uia),
+        "WU_HISTORY_ENABLED": _format_env_value(settings.history_enabled),
+        "WU_HISTORY_MAX_ENTRIES": _format_env_value(settings.history_max_entries),
+    }
+
+
+def save_settings_to_dotenv(
+    settings: Settings,
+    path: Path | None = None,
+) -> Path:
+    """将可编辑配置写入 `.env`（保留未管理键与注释）。"""
+    target = path or dotenv_path()
+    managed = _settings_env_map(settings)
+    lines_out: list[str] = []
+    seen: set[str] = set()
+    if target.is_file():
+        for raw_line in target.read_text(encoding="utf-8").splitlines():
+            stripped = raw_line.strip()
+            if stripped and not stripped.startswith("#") and "=" in stripped:
+                key = stripped.split("=", 1)[0].strip()
+                if key in managed:
+                    lines_out.append(f"{key}={managed.pop(key)}")
+                    seen.add(key)
+                    continue
+            lines_out.append(raw_line)
+    for key, value in managed.items():
+        if key not in seen:
+            lines_out.append(f"{key}={value}")
+    target.write_text("\n".join(lines_out).rstrip() + "\n", encoding="utf-8")
+    return target
 
 
 class Settings(BaseModel):
@@ -48,6 +114,8 @@ class Settings(BaseModel):
     overlay_height: int = Field(default=300, ge=150, le=900)
     overlay_opacity: float = Field(default=0.85, gt=0.1, le=1.0)
     request_timeout: float = Field(default=60.0, ge=5.0, le=300.0)
+    history_enabled: bool = True
+    history_max_entries: int = Field(default=50, ge=1, le=500)
 
     @field_validator("dark_theme", mode="before")
     @classmethod
@@ -91,6 +159,8 @@ class Settings(BaseModel):
             overlay_height=int(os.getenv("WU_OVERLAY_HEIGHT", "300")),
             overlay_opacity=float(os.getenv("WU_OVERLAY_OPACITY", "0.85")),
             request_timeout=float(os.getenv("WU_REQUEST_TIMEOUT", "60.0")),
+            history_enabled=cls._parse_bool(os.getenv("WU_HISTORY_ENABLED", "true")),
+            history_max_entries=int(os.getenv("WU_HISTORY_MAX_ENTRIES", "50")),
         )
 
 

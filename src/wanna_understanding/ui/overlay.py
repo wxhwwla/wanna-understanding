@@ -37,7 +37,7 @@ class OverlayWindow:
 
         self._title = tk.Label(
             self.root,
-            text="Wanna Understanding  (Ctrl+Shift+H 显示/隐藏)",
+            text="Wanna Understanding  (H/J/S: 隐藏/历史/设置)",
             bg="#1e1e1e",
             fg="#cccccc",
             font=tkfont.Font(family="Segoe UI", size=10, weight="bold"),
