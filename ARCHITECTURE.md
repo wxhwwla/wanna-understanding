@@ -73,8 +73,8 @@ src/wanna_understanding/
 ├── __init__.py                 # 包声明 + 版本号
 ├── __main__.py                 # 程序入口点（python -m）
 ├── analysis_coordinator.py     # 分析工作流（从 application.py 拆分）
-├── application.py              # 应用编排主类
-├── config.py                   # 全局配置（API Key / 截图频率 / 模型参数）
+├── application.py              # 应用编排主类（376 行）
+├── config.py                   # 全局配置（API Key / 截图频率 / 模型 / 超时 / 模式）
 ├── logger.py                   # 日志系统（文件轮转 + hook 未捕获异常）
 ├── smoke.py                    # 端到端冒烟测试（无 GUI 模式）
 ├── tcl_bootstrap.py            # DPI 感知引导（自动调用 SetProcessDPIAware）
@@ -96,10 +96,11 @@ src/wanna_understanding/
 │   ├── recognizer.py           # 识别器（源自 endfield 项目）
 │   └── theme.py                # 深色主题自动检测
 
-├── screen/                     # 屏幕捕获模块
+├── screen/                     # 屏幕捕获 + 代码获取模块
 │   ├── __init__.py
 │   ├── capture_plan.py         # 截图区域规划（全屏/窗口/自定义区域）
 │   ├── capturer.py             # mss 截图核心
+│   ├── clipboard_reader.py     # 剪贴板读取（Ctrl+A+C，默认代码获取方式）
 │   ├── code_region_detector.py # 自动代码区域检测（已不启用，保留参考）
 │   ├── custom_region.py        # 自定义监控区域管理
 │   ├── monitor.py              # 多显示器支持
@@ -198,7 +199,8 @@ src/wanna_understanding/
 | `HistoryDialog` | `ui.history_dialog` | 历史浏览对话框 |
 | `SettingsDialog` | `ui.settings_dialog` | 设置 GUI 对话框 |
 | `Logger` | `logger` | 日志系统：文件轮转 + hook 未捕获异常 |
-| `Application` | `application` | 主编排：串联截图、OCR、触发、AI 与悬浮窗 |
+| `read_editor_text` | `screen.clipboard_reader` | 剪贴板读取：Ctrl+A+C 获取精准代码（默认方式） |
+| `Application` | `application` | 主编排：串联代码获取、AI 与悬浮窗 |
 
 ---
 
