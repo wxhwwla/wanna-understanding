@@ -5,7 +5,7 @@
 
 from wanna_understanding.config import load_settings
 
-__version__ = "0.1.17"
+__version__ = "0.2.0"
 __all__: list[str] = [
     "__version__",
     "load_settings",
