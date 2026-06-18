@@ -18,9 +18,8 @@ from .position import compute_overlay_position
 
 _MIN_WIDTH = 280
 _MIN_HEIGHT = 180
-_RESIZE_CORNER = 28
-_RESIZE_EDGE = 12
-_TITLE_DEFAULT = "Wanna Understanding v0.1.17 · 拖标题栏移动 · 拖蓝角/底边/右边缩放"
+_RESIZE_HANDLE = 6       # 边缘拖拽区域宽度
+_TITLE_DEFAULT = "Wanna Understanding v0.2.2 · 拖标题栏移动 · 拖边缘缩放"
 _TITLE_FROZEN = "🧊 已冻结 · Alt+Shift+F 解冻"
 
 log = get_logger(__name__)
@@ -97,32 +96,35 @@ class OverlayWindow:
         self.text.insert("end", "正在等待代码变化…")
         self.text.configure(state="disabled")
 
-        self._edge_bottom = tk.Frame(
-            self.root, bg="#4a4a4a", cursor="sb_v_double_arrow",
-        )
-        self._edge_bottom.place(
-            relx=0, rely=1, relwidth=1, anchor="sw", height=_RESIZE_EDGE
-        )
+        # ── 四边缩放拖拽区（透明，仅光标提示） ──
+        self._edge_top = tk.Frame(self.root, bg="#3a3a3a", cursor="sb_v_double_arrow")
+        self._edge_top.place(relx=0, rely=0, relwidth=1, anchor="nw", height=_RESIZE_HANDLE)
+        self._bind_resize(self._edge_top, "n")
+
+        self._edge_bottom = tk.Frame(self.root, bg="#3a3a3a", cursor="sb_v_double_arrow")
+        self._edge_bottom.place(relx=0, rely=1, relwidth=1, anchor="sw", height=_RESIZE_HANDLE)
         self._bind_resize(self._edge_bottom, "s")
 
-        self._edge_right = tk.Frame(self.root, bg="#4a4a4a", cursor="sb_h_double_arrow")
-        self._edge_right.place(
-            relx=1, rely=0, relheight=1, anchor="ne", width=_RESIZE_EDGE
-        )
+        self._edge_left = tk.Frame(self.root, bg="#3a3a3a", cursor="sb_h_double_arrow")
+        self._edge_left.place(relx=0, rely=0, relheight=1, anchor="nw", width=_RESIZE_HANDLE)
+        self._bind_resize(self._edge_left, "w")
+
+        self._edge_right = tk.Frame(self.root, bg="#3a3a3a", cursor="sb_h_double_arrow")
+        self._edge_right.place(relx=1, rely=0, relheight=1, anchor="ne", width=_RESIZE_HANDLE)
         self._bind_resize(self._edge_right, "e")
 
-        self._corner = tk.Frame(self.root, bg="#4fc3f7", cursor="size_nw_se")
-        self._corner.place(
-            relx=1.0,
-            rely=1.0,
-            anchor="se",
-            width=_RESIZE_CORNER,
-            height=_RESIZE_CORNER,
-        )
-        self._bind_resize(self._corner, "se")
-        self._corner.lift()
-        self._edge_right.lift()
-        self._edge_bottom.lift()
+        # ── 四角缩放拖拽区 ──
+        def _corner(relx: float, rely: float, cursor: str, mode: str) -> tk.Frame:
+            cf = tk.Frame(self.root, bg="#3a3a3a", cursor=cursor)
+            cf.place(relx=relx, rely=rely, anchor="center",
+                     width=_RESIZE_HANDLE * 2, height=_RESIZE_HANDLE * 2)
+            self._bind_resize(cf, mode)
+            return cf
+
+        self._corner_nw = _corner(0, 0, "size_nw_se", "nw")
+        self._corner_ne = _corner(1, 0, "size_ne_sw", "ne")
+        self._corner_sw = _corner(0, 1, "size_ne_sw", "sw")
+        self._corner_se = _corner(1, 1, "size_nw_se", "se")
 
         self.root.bind("<Control-MouseWheel>", self._on_wheel_resize)
         self.root.bind(
@@ -202,9 +204,7 @@ class OverlayWindow:
     def _on_drag(self, event: tk.Event) -> None:
         x = event.x_root - self._drag_offset[0]
         y = event.y_root - self._drag_offset[1]
-        w = max(_MIN_WIDTH, self.root.winfo_width())
-        h = max(_MIN_HEIGHT, self.root.winfo_height())
-        self.root.geometry(f"{w}x{h}+{x}+{y}")
+        self.root.geometry(f"{self.width}x{self.height}+{x}+{y}")
 
     def _on_drag_end(self, _event: tk.Event) -> None:
         self._position_pinned = True
@@ -231,13 +231,30 @@ class OverlayWindow:
         dy = event.y_root - sy
         new_w = sw
         new_h = sh
-        if self._resize_mode in {"se", "e"}:
+        new_x = ox
+        new_y = oy
+        mode = self._resize_mode
+
+        # 水平方向
+        if "e" in mode:
             new_w = max(_MIN_WIDTH, sw + dx)
-        if self._resize_mode in {"se", "s"}:
+        elif "w" in mode:
+            new_w = max(_MIN_WIDTH, sw - dx)
+            new_x = ox + dx
+
+        # 垂直方向
+        if "s" in mode:
             new_h = max(_MIN_HEIGHT, sh + dy)
-        log.debug("缩放中: %s → %dx%d (dx=%d, dy=%d)",
-                   self._resize_mode, new_w, new_h, dx, dy)
-        self.root.geometry(f"{new_w}x{new_h}+{ox}+{oy}")
+        elif "n" in mode:
+            new_h = max(_MIN_HEIGHT, sh - dy)
+            new_y = oy + dy
+
+        log.debug("缩放中: %s → %dx%d+%d+%d (dx=%d, dy=%d)",
+                   mode, new_w, new_h, new_x, new_y, dx, dy)
+        self.root.geometry(f"{new_w}x{new_h}+{new_x}+{new_y}")
+        # 立即同步 size 避免下次拖拽读到旧值
+        self.width = new_w
+        self.height = new_h
 
     def _on_resize_end(self, _event: tk.Event) -> None:
         self._position_pinned = True
