@@ -80,10 +80,11 @@ class Settings(BaseModel):
     overlay_width: int = Field(default=520, ge=200, le=1200)
     overlay_height: int = Field(default=380, ge=150, le=900)
     overlay_opacity: float = Field(default=0.85, gt=0.1, le=1.0)
-    request_timeout: float = Field(default=60.0, ge=5.0, le=300.0)
+    request_timeout: float = Field(default=120.0, ge=5.0, le=300.0)
     history_enabled: bool = True
     history_max_entries: int = Field(default=50, ge=1, le=500)
     tray_enabled: bool = True
+    use_vision: bool = False  # DeepSeek V4 Flash 不支持 vision；设为 true 需换用 OpenAI/Claude 等
 
     @field_validator("dark_theme", mode="before")
     @classmethod
@@ -130,6 +131,7 @@ class Settings(BaseModel):
             history_enabled=cls._parse_bool(os.getenv("WU_HISTORY_ENABLED", "true")),
             history_max_entries=int(os.getenv("WU_HISTORY_MAX_ENTRIES", "50")),
             tray_enabled=cls._parse_bool(os.getenv("WU_TRAY_ENABLED", "true")),
+            use_vision=cls._parse_bool(os.getenv("WU_USE_VISION", "false")),
         )
 
 
@@ -149,6 +151,7 @@ def _settings_env_map(settings: Settings) -> dict[str, str]:
         "WU_HISTORY_ENABLED": _format_env_value(settings.history_enabled),
         "WU_HISTORY_MAX_ENTRIES": _format_env_value(settings.history_max_entries),
         "WU_TRAY_ENABLED": _format_env_value(settings.tray_enabled),
+        "WU_USE_VISION": _format_env_value(settings.use_vision),
         "WU_OVERLAY_WIDTH": _format_env_value(settings.overlay_width),
         "WU_OVERLAY_HEIGHT": _format_env_value(settings.overlay_height),
         "WU_OVERLAY_OPACITY": _format_env_value(settings.overlay_opacity),

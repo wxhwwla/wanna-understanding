@@ -12,11 +12,12 @@ from collections.abc import Callable
 from typing import Any
 
 import httpx
+from PIL import Image
 
 from wanna_understanding.config import Settings
 
 from .cache import AnalysisResult
-from .prompt import SYSTEM_PROMPT, build_user_prompt
+from .prompt import SYSTEM_PROMPT, VISION_SYSTEM_PROMPT, build_user_prompt
 from .stream import iter_sse_deltas
 
 _SECTION_PATTERNS: tuple[tuple[str, str], ...] = (
@@ -62,6 +63,96 @@ class AIClient:
 
         raw = self._call_api(_code, stream=True, on_sse_delta=_collect)
         return self._build_result(digest, raw)
+
+    def analyze_vision(self, image: Image.Image) -> AnalysisResult:  # type: ignore[name-defined, unused-ignore]
+        """分析代码截图（多模态视觉模式，跳过 OCR）。"""
+        if not self._settings.has_api_key:
+            return AnalysisResult(
+                code_hash="",
+                summary="未配置 DEEPSEEK_API_KEY",
+                bugs=[],
+                suggestions=["设置 API Key 后重启程序"],
+                raw_response="",
+            )
+        import base64
+        from io import BytesIO
+
+        # 压缩图片：最长边限制 2048px，JPEG 质量 75，减小传输量
+        img = image.convert("RGB")
+        longest = max(img.width, img.height)
+        if longest > 2048:
+            scale = 2048 / longest
+            img = img.resize((int(img.width * scale), int(img.height * scale)),
+                             Image.Resampling.LANCZOS)
+        buffer = BytesIO()
+        img.save(buffer, format="JPEG", quality=75)
+        image_b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+        image_data_uri = f"data:image/jpeg;base64,{image_b64}"
+
+        url = f"{self._settings.deepseek_api_base.rstrip('/')}/chat/completions"
+        payload: dict[str, Any] = {
+            "model": self._settings.deepseek_model,
+            "messages": [
+                {"role": "system", "content": VISION_SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "请分析以下代码截图："},
+                        {"type": "image_url", "image_url": {"url": image_data_uri}},
+                    ],
+                },
+            ],
+            "temperature": 0.2,
+            "max_tokens": 2048,
+        }
+        headers = {
+            "Authorization": f"Bearer {self._settings.deepseek_api_key}",
+            "Content-Type": "application/json",
+        }
+        try:
+            # vision 调用单独用长超时（最大 300s）
+            vision_timeout = httpx.Timeout(
+                connect=min(60.0, self._settings.request_timeout),
+                read=min(300.0, max(self._settings.request_timeout, 120.0)),
+                write=60.0,
+                pool=60.0,
+            )
+            response = httpx.post(url, json=payload, headers=headers,
+                                  timeout=vision_timeout)
+            response.raise_for_status()
+            data = response.json()
+            raw = str(data["choices"][0]["message"]["content"])
+            return self._build_result("vision", raw)
+        except httpx.TimeoutException:
+            return AnalysisResult(
+                code_hash="",
+                summary="分析失败：AI API 连接超时，请检查网络或增大超时设置",
+                bugs=[],
+                suggestions=["检查网络连接", "增大 request_timeout 设置"],
+                raw_response="",
+            )
+        except httpx.HTTPStatusError as exc:
+            detail = str(exc)
+            # 尝试获取 API 返回的实际错误消息
+            try:
+                body = exc.response.json()
+                api_msg = body.get("error", {}).get("message", str(body))
+                detail = f"{detail}\nAPI 返回: {api_msg}"
+            except Exception:
+                detail = f"{detail}\n响应体: {exc.response.text[:300]}"
+            if exc.response.status_code == 401:
+                detail = "API Key 无效或未配置"
+            return AnalysisResult(
+                code_hash="",
+                summary=f"分析失败：{detail}",
+                bugs=[],
+                suggestions=[
+                    "确认使用的 AI 模型是否支持 vision（多模态）",
+                    "尝试换用支持 vision 的模型，如 deepseek-vision",
+                    "或在 .env 中设置 WU_USE_VISION=false 回退 OCR 模式",
+                ],
+                raw_response=str(exc),
+            )
 
     def _prepare_request(
         self,

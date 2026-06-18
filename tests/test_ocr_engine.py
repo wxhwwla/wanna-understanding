@@ -12,7 +12,7 @@ from wanna_understanding.ocr.recognizer import OCRRecognizer
 
 
 class _FakeReader:
-    def readtext(self, _array: object) -> list:
+    def readtext(self, _array: object, **kwargs: object) -> list:
         return [([[0, 0], [50, 0], [50, 12], [0, 12]], "const fn = () —> null", 0.9)]
 
 

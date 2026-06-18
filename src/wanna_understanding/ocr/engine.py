@@ -26,6 +26,26 @@ _SYMBOL_FIXES: tuple[tuple[str, str], ...] = (
     (r"\|", "|"),   # 确保竖线保留
     (r"—", "——"),   # 长破折号保持
     (r"\bnull\b", "None"),
+    # ── 以下针对 Python 代码常见 OCR 误识 ──
+    (r"(?<![a-zA-Z])iport(?![a-zA-Z])", "import"),  # import → iport
+    (r"(?<=from\s)_(?=\s)", "__"),                   # from _ → from __
+    (r"_(\s)", r"__\1"),                             # 单下划线+空格 → 双下划线+空格（修复 `_ ` → `__ `）
+    (r"\bSy5\b", "sys"),                             # sys → Sy5
+    (r"PathC", "Path("),                             # Path( → PathC
+    (r"([a-z])C([a-z])", r"\1(\2"),                  # 字母C字母 → 字母(字母 (修复 C 被误读为 ()
+    (r"file-\)", "file)"),                           # file) → file-) 修复
+    (r"\_file\_", "__file__"),                       # _file_ → __file__
+    (r"\bFi1e\b", "File"),                           # File → Fi1e
+    (r"\bC1ass\b", "Class"),                         # Class → C1ass
+    (r"\bDe1\b", "Del"),                             # del → de1 (小写 l 与 1 混淆)
+    (r"\bSe1f\b", "Self"),                           # self → Se1f
+    (r"\bde1\b", "del"),
+    (r"\bse1f\b", "self"),
+    (r"\bTrue\b", "True"),                           # True → Ture 等变体
+    (r"\bTure\b", "True"),
+    (r"\bFa1se\b", "False"),
+    (r"\bNone\b", "None"),
+    (r"\bnu11\b", "null"),                           # 小写 L 替代数字 1
 )
 
 
@@ -42,8 +62,9 @@ class OCREngine:
         self._preprocessor = preprocessor or ImagePreprocessor()
         self._recognizer = recognizer
         self._min_confidence = min_confidence
-        # 默认中英混合（ch_sim + en）；首次加载会下载 ~50MB 模型
-        self._lang_list = lang_list or ["en", "ch_sim"]
+        # 默认纯英文；ch_sim 会严重干扰 Python 特殊符号（_() 等）的识别。
+        # 如需中英文混合代码，在设置中手动添加 ch_sim 或通过 WU_OCR_LANG 环境变量设定。
+        self._lang_list = lang_list or ["en"]
 
     def _ensure_recognizer(self) -> OCRRecognizer:
         if self._recognizer is None:
@@ -103,15 +124,16 @@ class OCREngine:
         fixed = text
         for pattern, replacement in _SYMBOL_FIXES:
             fixed = re.sub(pattern, replacement, fixed)
-        # 过滤行号：单独的数字行（编辑器行号），如 " 4", " 5  ", "6"
+        # 过滤行号：编辑器行号或噪声，如 "4", " 5  ", "6.", "7,"
+        _NOISE_PATTERNS = (
+            re.compile(r"^\d{1,3}$"),              # "2", " 5 ", "123"
+            re.compile(r"^\d{1,3}[.,;:\-]$"),       # "2.", "3,", "4:"
+            re.compile(r"^[a-zA-Z]$"),              # "F", "x" (行号误识别)
+        )
         cleaned: list[str] = []
         for line in fixed.splitlines():
             stripped = line.strip()
-            # 跳过纯数字行（编辑器行号）
-            if re.fullmatch(r"\d+", stripped):
-                continue
-            # 跳过只有一个字母的行（可能是行号误识别）
-            if re.fullmatch(r"[a-zA-Z]", stripped):
+            if any(p.match(stripped) for p in _NOISE_PATTERNS):
                 continue
             cleaned.append(line.rstrip())
         # 去重

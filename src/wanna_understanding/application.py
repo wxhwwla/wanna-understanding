@@ -155,6 +155,7 @@ class Application(AnalysisCoordinator):
             f"防抖延迟：{self.settings.debounce_delay}s",
             f"局部发送：最多 {self.settings.context_max_lines} 行",
             f"AI 模型：{self.settings.deepseek_model}",
+            f"识别模式：{'多模态视觉' if self.settings.use_vision else 'OCR 识别'}",
             "快捷键：Alt+Shift+H 显示/隐藏 | J 历史 | O 设置 | Alt+Shift+F 冻结",
             "悬浮窗：拖标题栏移动 | 拖蓝角/底边/右边缩放 | Ctrl+滚轮 | 双击标题",
         ]

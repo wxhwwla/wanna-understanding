@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0
 # -*- coding: utf-8 -*-
 
-"""编辑器 OCR 配置：针对 VS Code / Cursor / PyCharm 等优化预处理参数。"""
+"""编辑器 OCR 配置：针对 VS Code / Cursor / PyCharm / Trae 等优化预处理参数。"""
 
 from __future__ import annotations
 
@@ -17,8 +17,7 @@ class EditorOCRProfile:
     """单种编辑器/主题的 OCR 预处理参数。"""
 
     name: str
-    upscale_factor: float = 2.0
-    binarize_threshold: int | None = None
+    upscale_factor: float = 3.0
     crop_ratio: float | None = None
     strip_line_numbers: bool = False
 
@@ -30,43 +29,41 @@ class EditorOCRProfile:
 _PROFILES: dict[str, EditorOCRProfile] = {
     "vscode_dark": EditorOCRProfile(
         name="vscode_dark",
-        upscale_factor=2.5,
+        upscale_factor=3.0,
         crop_ratio=0.72,
         strip_line_numbers=True,
     ),
     "vscode_light": EditorOCRProfile(
         name="vscode_light",
-        upscale_factor=2.0,
-        binarize_threshold=145,
+        upscale_factor=3.0,
         crop_ratio=0.72,
         strip_line_numbers=True,
     ),
     "cursor_dark": EditorOCRProfile(
         name="cursor_dark",
-        upscale_factor=2.5,
+        upscale_factor=3.0,
         crop_ratio=0.72,
         strip_line_numbers=True,
     ),
     "trae_dark": EditorOCRProfile(
         name="trae_dark",
-        upscale_factor=2.5,
+        upscale_factor=3.0,
         crop_ratio=0.72,
         strip_line_numbers=True,
     ),
     "pycharm_dark": EditorOCRProfile(
         name="pycharm_dark",
-        upscale_factor=2.5,
+        upscale_factor=3.0,
         crop_ratio=0.68,
         strip_line_numbers=True,
     ),
     "pycharm_light": EditorOCRProfile(
         name="pycharm_light",
-        upscale_factor=2.0,
-        binarize_threshold=140,
+        upscale_factor=3.0,
         crop_ratio=0.68,
         strip_line_numbers=True,
     ),
-    "generic": EditorOCRProfile(name="generic", upscale_factor=2.0),
+    "generic": EditorOCRProfile(name="generic", upscale_factor=3.0),
 }
 
 

@@ -101,21 +101,36 @@ class AnalysisCoordinator:
         log.debug("最终代码区域: (%d,%d,%d,%d) → %dx%d",
                   *crop_rect, code_image.width, code_image.height)
 
-        # === 后台线程：OCR + AI ===
+        # === 后台线程：OCR + AI（或纯视觉 AI） ===
         def work(img: Image.Image = code_image) -> None:
             stop_heartbeat = threading.Event()
             started = time.monotonic()
+            phase: list[str] = ["vision" if self.settings.use_vision  # type: ignore[attr-defined]
+                                else "OCR"]
 
             def heartbeat() -> None:
                 while not stop_heartbeat.wait(3.0):
                     elapsed = int(time.monotonic() - started)
-                    self._schedule_status(
-                        f"正在识别代码…（已 {elapsed}s，CPU 首次较慢属正常）"
-                    )
+                    label = {
+                        "vision": "AI 正在分析截图",
+                        "AI": "正在调用 AI 分析",
+                        "OCR": "正在识别代码",
+                    }.get(phase[0], "正在分析")
+                    self._schedule_status(f"{label}…（已 {elapsed}s）")
 
             pulse = threading.Thread(target=heartbeat, daemon=True)
             pulse.start()
             try:
+                # ── 多模态视觉模式：跳过 OCR，直接发截图给 AI ──
+                if self.settings.use_vision:  # type: ignore[attr-defined]
+                    log.info("多模态视觉模式：直接分析截图")
+                    result = self.ai.analyze_vision(img)  # type: ignore[attr-defined]
+                    self._schedule_result(result)
+                    self._schedule_freeze()
+                    log.info("视觉分析完成")
+                    return
+
+                # ── OCR 模式：现有流程 ──
                 if not self._ocr_ready.is_set():  # type: ignore[attr-defined]
                     log.info("首次 OCR 预热中…")
                     self.ocr.warmup()  # type: ignore[attr-defined]
@@ -156,6 +171,7 @@ class AnalysisCoordinator:
                     self._schedule_freeze()
                     return
                 log.info("缓存未命中，调用 AI 分析")
+                phase[0] = "AI"
                 result = self._run_ai_analysis(trimmed, code_hash)
                 self.cache.put(code_hash, result)  # type: ignore[attr-defined]
                 self._record_history(trimmed, result)

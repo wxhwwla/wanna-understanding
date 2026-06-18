@@ -112,7 +112,12 @@ class OCRRecognizer:
 
         array = np.asarray(image.convert("RGB"))
         started = time.perf_counter()
-        raw = self._ensure_reader().readtext(array)
+        # 调低 text_threshold/low_text 提高对小字和特殊符号的敏感度
+        raw = self._ensure_reader().readtext(
+            array,
+            text_threshold=0.5,
+            low_text=0.3,
+        )
         elapsed_ms = (time.perf_counter() - started) * 1000
         return OCRResult(
             image_path=source,
@@ -121,17 +126,34 @@ class OCRRecognizer:
         )
 
     def _parse_raw(self, raw: list[Any]) -> list[OCRText]:
-        """按从上到下、从左到右排序后解析 EasyOCR 输出。"""
+        """按从上到下、从左到右排序后解析 EasyOCR 输出。
+
+        paragraph=True 时 EasyOCR 的输出格式会变化：
+        - 普通模式：list of (bbox, text, confidence)
+        - 段落模式：list of (text, confidence) — bbox 被合并丢弃
+        此方法兼容两种格式。
+        """
         ranked: list[tuple[float, float, str, float]] = []
-        for bbox, text, confidence in raw:
-            score = float(confidence)
-            if score < self._min_confidence:
-                continue
+        for item in raw:
+            # 兼容 (text, confidence) 和 (bbox, text, confidence) 两种格式
+            if len(item) == 2:
+                text, confidence = item
+                y_center = 0.0
+                x_left = 0.0
+            else:
+                bbox, text, confidence = item[:3]
+                y_center = (bbox[0][1] + bbox[2][1]) / 2
+                x_left = bbox[0][0]
+            # paragraph=True 时 confidence 可能为 None，直接保留
+            if confidence is not None:
+                score = float(confidence)
+                if score < self._min_confidence:
+                    continue
+            else:
+                score = 1.0  # 段落模式无置信度，视为高置信
             cleaned = str(text).rstrip("\n\r")
             if not cleaned.strip():
                 continue
-            y_center = (bbox[0][1] + bbox[2][1]) / 2
-            x_left = bbox[0][0]
             ranked.append((y_center, x_left, cleaned, score))
         ranked.sort(key=lambda item: (item[0], item[1]))
 
