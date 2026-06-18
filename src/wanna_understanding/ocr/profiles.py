@@ -29,41 +29,41 @@ class EditorOCRProfile:
 _PROFILES: dict[str, EditorOCRProfile] = {
     "vscode_dark": EditorOCRProfile(
         name="vscode_dark",
-        upscale_factor=3.0,
+        upscale_factor=4.0,
         crop_ratio=0.72,
         strip_line_numbers=True,
     ),
     "vscode_light": EditorOCRProfile(
         name="vscode_light",
-        upscale_factor=3.0,
+        upscale_factor=4.0,
         crop_ratio=0.72,
         strip_line_numbers=True,
     ),
     "cursor_dark": EditorOCRProfile(
         name="cursor_dark",
-        upscale_factor=3.0,
+        upscale_factor=4.0,
         crop_ratio=0.72,
         strip_line_numbers=True,
     ),
     "trae_dark": EditorOCRProfile(
         name="trae_dark",
-        upscale_factor=3.0,
+        upscale_factor=4.0,
         crop_ratio=0.72,
         strip_line_numbers=True,
     ),
     "pycharm_dark": EditorOCRProfile(
         name="pycharm_dark",
-        upscale_factor=3.0,
+        upscale_factor=4.0,
         crop_ratio=0.68,
         strip_line_numbers=True,
     ),
     "pycharm_light": EditorOCRProfile(
         name="pycharm_light",
-        upscale_factor=3.0,
+        upscale_factor=4.0,
         crop_ratio=0.68,
         strip_line_numbers=True,
     ),
-    "generic": EditorOCRProfile(name="generic", upscale_factor=3.0),
+    "generic": EditorOCRProfile(name="generic", upscale_factor=4.0),
 }
 
 

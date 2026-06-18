@@ -85,6 +85,7 @@ class Settings(BaseModel):
     history_max_entries: int = Field(default=50, ge=1, le=500)
     tray_enabled: bool = True
     use_vision: bool = False  # DeepSeek V4 Flash 不支持 vision；设为 true 需换用 OpenAI/Claude 等
+    use_clipboard: bool = True  # 通过模拟 Ctrl+A → Ctrl+C 直接读取编辑器代码（免截图、免 OCR）
 
     @field_validator("dark_theme", mode="before")
     @classmethod
@@ -132,6 +133,7 @@ class Settings(BaseModel):
             history_max_entries=int(os.getenv("WU_HISTORY_MAX_ENTRIES", "50")),
             tray_enabled=cls._parse_bool(os.getenv("WU_TRAY_ENABLED", "true")),
             use_vision=cls._parse_bool(os.getenv("WU_USE_VISION", "false")),
+            use_clipboard=cls._parse_bool(os.getenv("WU_USE_CLIPBOARD", "true")),
         )
 
 
@@ -152,6 +154,7 @@ def _settings_env_map(settings: Settings) -> dict[str, str]:
         "WU_HISTORY_MAX_ENTRIES": _format_env_value(settings.history_max_entries),
         "WU_TRAY_ENABLED": _format_env_value(settings.tray_enabled),
         "WU_USE_VISION": _format_env_value(settings.use_vision),
+        "WU_USE_CLIPBOARD": _format_env_value(settings.use_clipboard),
         "WU_OVERLAY_WIDTH": _format_env_value(settings.overlay_width),
         "WU_OVERLAY_HEIGHT": _format_env_value(settings.overlay_height),
         "WU_OVERLAY_OPACITY": _format_env_value(settings.overlay_opacity),
